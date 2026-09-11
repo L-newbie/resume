@@ -1,0 +1,4571 @@
+/* ═══════════════════════════════════════════════════════════
+   赫卫东 · 个人站
+   主题：感知视界 Perception HUD
+
+   交互模型：悬浮地球仪导航，页面不滚动。
+     默认  点云地球仪，球面是六块大洲，每块 = 一个板块。
+           相机分镜停靠到各块大洲，转到的那块高亮 + 弹出小屏。
+           小屏固定在视口中央，一根引线指向对应的大洲。
+     板块  点小屏进入，球缩到左上角，右侧面板占 76% 展开完整内容。
+
+   响应式（三档，小屏始终居中，只是尺寸和字号收档）：
+     手机  <768px   球小、小屏窄、偏移改为主要靠纵向
+     平板  768–1199 面板占 82%
+     桌面  ≥1200px  完整体验
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 设计令牌 ────────────────────────────────────────────── */
+:root {
+  /* 色板：深空底 + 青主色 + 琥珀点缀 */
+  --bg: #05080f;
+  --bg-soft: #0a1018;
+  --ink: #e8eef5;
+  --ink-dim: rgba(232, 238, 245, 0.72);
+  /* ⚠️ 曾经是 0.34 —— 在 #05080f 底上对比度只有 **2.73**，
+     远低于 WCAG AA 的 4.5。而卡片标签、序号、职位副标题全用它，
+     用户说「不够清晰」就是这个。实测 0.486 是 AA 的临界，
+     取 0.52 留一点余量（对比度 5.0）。
+     纯装饰、不承载信息的元素请用 --ink-ghost，别把这个再调暗。 */
+  --ink-faint: rgba(232, 238, 245, 0.52);
+  /* 纯装饰用（分隔符、水印式序号）——不达 AA 是有意的，
+     因为它不承载任何需要被读到的信息。 */
+  --ink-ghost: rgba(232, 238, 245, 0.3);
+  --cyan: #3ddfe0;
+  --cyan-dim: rgba(61, 223, 224, 0.5);
+  --amber: #ffb454;
+  /* 当前板块的主色。每帧由 3D 层写入（见 Panes.tsx / OrbScene.accentCss）——
+     转板块时它是**连续渐变**的，所有读它的地方跟着一起过渡。
+     这里的初值对应 00 身份（青）；JS 没跑起来时也不会没颜色。 */
+  --accent: #3ddfe0;
+  --line: rgba(232, 238, 245, 0.12);
+  --line-strong: rgba(61, 223, 224, 0.35);
+  --panel: rgba(8, 14, 22, 0.86);
+
+  /* 排版 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace,
+    'Cascadia Code', Consolas, monospace;
+
+  --pad-x: clamp(20px, 5vw, 96px);
+  /* 移动端 100vh 修正，JS 写入（见 hooks.ts useViewportUnitFix） */
+  --vh: 1vh;
+  /*
+    左侧竖栏的基准线。HUD 的身份读数、坐标读数、原图小图都在 54px，
+    板块导航（首页态和板块内态**都**）跟它对齐 ——
+    差几个像素的「几乎对齐」比明显不对齐更难看。
+    ⚠️ 首页和板块内共用这一个值，改它两处一起动，不会再分家。
+  */
+  --nav-x: 54px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── 基础 ────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  /* 页面不滚动 —— 所有滚动都发生在板块面板内部 */
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: clamp(15px, 1.05vw, 17px);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--cyan);
+  color: var(--bg);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.hud-mono {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.app {
+  position: relative;
+  height: 100%;
+  height: calc(var(--vh) * 100);
+}
+
+/* ═══ 球体层 ═════════════════════════════════════════════ */
+.orb-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* ── 板块导航 ────────────────────────────────────────────
+   两种形态：
+     .is-home    首页，固定在视口左侧，和球体双向联动
+     .is-docked  板块内，挂在缩小的地球下方（位置由 JS 每帧写）
+
+   ⚠️ z-index 必须高于 .sheet(40)：.orb-layer 本身是 z-index:1，
+   列表留在里面会被内容面板整个盖住。
+
+   ⚠️ 两种形态**共用同一套外观**（2026-09-08 用户要求「项目内的标签导航
+   和外面做成一样的 UI」）。以前板块内那版是「卡片 + 背景 + backdrop-filter
+   + 左缘内阴影」，和首页的「无边框 + 会伸长的横线」完全两套，
+   进出板块像换了个控件。别再往 .is-docked 上加专属外观。 */
+.orb-nav {
+  position: fixed;
+  z-index: 45;
+  /* 左边缘两种形态一致 —— 进板块时列表只在纵向移动，不会横向跳 */
+  left: var(--nav-x);
+  animation: orbNavIn 0.5s var(--ease) 0.25s both;
+}
+
+/* 首页：钉在左侧，比正中略靠下。
+   ⚠️ 偏移用 vh 不用 px —— 矮屏上固定 px 会显得压得太低。
+   5vh 在 1080 高的屏上约 54px，800 高的屏上约 40px。 */
+.orb-nav.is-home {
+  top: calc(50% + 5vh);
+  transform: translateY(-50%);
+}
+
+/* 板块内：挂在缩小的球下方。纵向位置由 JS 每帧写（球是缓动的），
+   横向不写 —— 靠上面那条 left 和首页对齐。 */
+.orb-nav.is-docked {
+  top: 0;
+}
+
+@keyframes orbNavIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.orb-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.on-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  /* 左侧不留内边距：文字直接从 --nav-x 那条基准线起排 */
+  padding: 7px 10px 7px 0;
+  font-size: 0.72rem;
+  text-align: left;
+  color: var(--ink-faint);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.25s var(--ease),
+    padding-left 0.25s var(--ease);
+}
+
+/* 移入：字提亮 + 整条往右让一点，指示条同时伸长（见 .on-bar） */
+.on-item:hover {
+  color: var(--ink);
+  padding-left: 6px;
+}
+
+.on-item.is-on {
+  color: var(--accent);
+}
+
+/*
+  用一条会伸长的横线做指示，而不是背景块 ——
+  它呼应球体上的引线，也不会在球旁边压出一个方块。
+  ⚠️ 首页和板块内都用它（以前 .is-docked 把它 display:none 了，
+  改成背景块指示，于是两个形态长得完全不一样）。
+*/
+.on-bar {
+  width: 14px;
+  height: 1px;
+  flex: none;
+  background: currentColor;
+  opacity: 0.35;
+  transition: width 0.35s var(--ease), opacity 0.35s var(--ease);
+}
+
+.on-item:hover .on-bar {
+  width: 26px;
+  opacity: 0.8;
+}
+
+.on-item.is-on .on-bar {
+  width: 34px;
+  opacity: 1;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.on-no {
+  font-size: 0.5rem;
+  opacity: 0.7;
+}
+
+.on-label {
+  min-width: 0;
+}
+
+.orb-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 左上角的原图小图 ────────────────────────────────────
+   球面上那张弧形照片的「原件」。球面那张被弯曲、压暗、掺了主色，
+   这里给一张未经处理的做参照。
+
+   ⚠️ 位置要躲开 HUD：左上角的读数在 top:22 / left:54，
+   所以这块从 top:64 起。z-index 低于 HUD(5) 和小屏(4)，
+   它是背景层的补充，不该压住任何可交互的东西。 */
+.photo-badge {
+  position: fixed;
+  top: 64px;
+  left: 54px;
+  z-index: 6;
+  margin: 0;
+  width: clamp(148px, 15vw, 232px);
+  /*
+    ⚠️ 放大靠 width 过渡，不用 transform: scale —— scale 会把图片
+    连同四角标记、说明文字一起拉糊；width 变化时图片是重新布局的，
+    任何尺寸下都清晰。
+    transform-origin 无关紧要，因为定位是 top/left 固定的左上角，
+    放大时自然向右下展开，不会跑出屏幕。
+  */
+  transition: width 0.42s var(--ease), box-shadow 0.42s var(--ease);
+}
+
+/* 放大态：移入或点击锁定 */
+.photo-badge.is-big {
+  width: clamp(300px, 34vw, 520px);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(61, 223, 224, 0.16);
+}
+
+/*
+  放大时提到遮罩之上。
+  ⚠️ 是 .is-big 而不是 .is-locked —— 移入和点击的视觉效果必须一致。
+  只给 locked 的话，hover 放大时 z-index 还是 6，会被小屏(4)之上的
+  HUD(5) 压住一角，两种方式看起来就不一样了。
+*/
+.photo-badge.is-big {
+  z-index: 51;
+}
+
+/*
+  可点击的命中区。
+  ⚠️ 图片和标记都挂在这个 button 里 —— 早先整块是
+  pointer-events:none + aria-hidden，完全不可交互，
+  自然「点击无法放大」。
+*/
+.pb-hit {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  cursor: zoom-in;
+  border: 1px solid rgba(61, 223, 224, 0.3);
+  background: rgba(6, 11, 20, 0.6);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.5);
+  /* 右上切角，和小屏是同一套工业面板形状 */
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+  transition: border-color 0.3s var(--ease);
+  animation: pbIn 0.7s var(--ease) 0.5s both;
+}
+
+.photo-badge.is-big .pb-hit {
+  border-color: rgba(61, 223, 224, 0.55);
+}
+
+.photo-badge.is-locked .pb-hit {
+  cursor: zoom-out;
+}
+
+@keyframes pbIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.photo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* 略压一档饱和，和整站的冷色调不冲突；但不像球面那张压那么狠 */
+  filter: saturate(0.9) contrast(1.05);
+}
+
+/* 放大后不再压饱和 —— 这时是要看清原图 */
+.photo-badge.is-big img {
+  filter: none;
+}
+
+/* 四角标记比小屏的小一号 */
+.photo-badge .pn-corner {
+  width: 9px;
+  height: 9px;
+}
+
+.pb-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 5px 8px;
+  font-size: 0.52rem;
+  text-align: left;
+  color: var(--cyan);
+  background: linear-gradient(to top, rgba(5, 8, 15, 0.92), transparent);
+}
+
+/* 锁定放大时的背景遮罩 —— 点它收起 */
+.pb-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(3, 6, 12, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: pbScrimIn 0.32s var(--ease) both;
+  /*
+    ⚠️ 默认不接收鼠标。hover 放大时遮罩铺满全屏，若能接收鼠标，
+    它会立刻盖住 badge 并夺走 hover —— 于是「放大→遮罩出现→
+    鼠标不在 badge 上了→收起→遮罩消失→又 hover 到 badge」
+    死循环闪烁。
+    只有点击锁定后才需要「点空白处收起」，那时才开启。
+  */
+  pointer-events: none;
+}
+
+.pb-scrim.is-locked {
+  pointer-events: auto;
+  cursor: zoom-out;
+}
+
+@keyframes pbScrimIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 噪点 + 扫描线 */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.02) 0px,
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.grain::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 38vh;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(61, 223, 224, 0.04),
+    transparent
+  );
+  animation: sweep 9s linear infinite;
+}
+
+@keyframes sweep {
+  from {
+    transform: translateY(-40vh);
+  }
+  to {
+    transform: translateY(140vh);
+  }
+}
+
+/* ═══ 科幻小屏 ═══════════════════════════════════════════
+   挂在球面上的 6 块投影。位置每帧由 JS 直写 transform
+   （见 Panes.tsx）—— 不加 transition，否则会「拖」在球后面。 */
+/* 引线：从中央小屏指向当前大洲。z-index 比小屏低 ——
+   线从屏体后面伸出来，不压在文字上。 */
+.pn-lead {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  /* ⚠️ 这里不能有 opacity 的 transition。
+     JS 每帧直写 opacity 来做「线的淡入」（见 Panes.tsx 的 grow/0.15），
+     再叠一层 CSS 过渡会让两者打架：切板块时旧线要 0.5s 才淡完，
+     新线已经开始画了 —— 屏幕上就是「线一直都在，只是跳了个位置」。 */
+}
+
+.pn-lead line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.55;
+  stroke-dasharray: 5 4;
+  animation: leadDash 1.4s linear infinite;
+}
+
+@keyframes leadDash {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* 终点标记：钉在大洲中心的地表上。
+   实心 + 外环 + 脉冲，看着是「插在那里」而不是「浮在上面」。 */
+.pn-lead circle {
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-opacity: 0.22;
+  opacity: 0.95;
+  animation: leadPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes leadPulse {
+  0%,
+  100% {
+    stroke-width: 6;
+    stroke-opacity: 0.22;
+  }
+  50% {
+    stroke-width: 11;
+    stroke-opacity: 0.05;
+  }
+}
+
+.panes {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  /* 打开/关闭板块时整体淡入淡出（见 .app.is-open .panes）。
+     延迟淡入，等球先缩回原位再出现，不然小屏会「追」着球跑。 */
+  transition: opacity 0.55s var(--ease) 0.15s;
+}
+
+/* ── 小屏：挂在大洲上的虚拟投影 ──────────────────────────
+   位置每帧由 JS 直写 transform（见 Panes.tsx）——
+   不加位置类 transition，否则会「拖」在球后面。
+
+   .pane 只负责定位；视觉全在 .pn-inner 上 ——
+   这样开机动画（缩放 / 裁切）不会和 JS 写的 transform 打架。 */
+.pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* 310 是「一行中文约 15 字」的宽度 —— 小屏是「透出一点点」的
+     预览，不是内容本体，窄一点反而更像 HUD 上的一块投影。
+     试过 660（像表格不像投影屏）、440、360，一路收窄到这里。
+     min() 兜住溢出：小屏是绝对定位且 translate(-50%)，
+     宽过视口就会被裁掉两边。
+
+     ⚠️ 改这个值必须同步改 OrbScene.paneOffsetPx() 里的 paneW ——
+     那里靠它算横向偏移的上限，两边对不上就会溢出或者引线没长度。
+     ⚠️ 别在任何断点里给 .pane 写死宽度 —— 平板断点里曾经有一条
+     `width: 200px`（早期版本残留），静默覆盖了这里的值很久。 */
+  width: min(310px, 80vw);
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  /* 鼠标在屏内的位置，由 JS 写（见 Panes.tsx 的 onMouseMove）。
+     默认居中，这样没有鼠标时光斑也在正中。 */
+  --mx: 50%;
+  --my: 50%;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  /* 鼠标相对屏心的归一化偏移（−1..1），内容层拿它做反向视差 */
+  --px: 0;
+  --py: 0;
+  /* hover 时把屏体往观众方向推出来 + 略放大；不 hover 时归零。
+     ⚠️ 推近只能写在 .pn-inner 的 transform 里 ——
+     .pane 自己的 transform 是 JS 每帧覆写的（球面投影位置）。 */
+  --pop: 0px;
+  --pop-sc: 1;
+  --spot: 0.13;
+  /* 高光圆心相对小屏左上角的位置，像素（见 Panes.tsx 的 onMouseMove）。
+     默认 50% 是让没有鼠标时它待在正中。 */
+  --mpx: 50%;
+  --mpy: 50%;
+}
+
+.pn-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 17px 20px 14px;
+  /* ── 虚拟投影，不是实体面板 ──
+     底色压得很淡（0.42 而不是 0.9），让球体能透过来 ——
+     「投在空中的光」和「贴在屏幕上的卡片」区别就在这里。
+     不用 backdrop-filter 的重度模糊：那会把背后的球糊成一团，
+     反而显得是块实心玻璃。 */
+  background:
+    /* 鼠标位置的光斑 —— 跟着指针走，像光标在屏面上「照」出一片亮 */
+    radial-gradient(
+      260px circle at var(--mx) var(--my),
+      rgba(61, 223, 224, var(--spot)),
+      transparent 62%
+    ),
+    linear-gradient(to bottom, rgba(61, 223, 224, 0.07), transparent 18%),
+    linear-gradient(160deg, rgba(8, 20, 34, 0.46), rgba(4, 9, 17, 0.4));
+  border: 1px solid rgba(61, 223, 224, 0.32);
+  backdrop-filter: blur(3px) saturate(1.15);
+  -webkit-backdrop-filter: blur(3px) saturate(1.15);
+  box-shadow:
+    /* 外发光是投影感的关键：光从屏体边缘漏出来 */
+    0 0 30px rgba(61, 223, 224, 0.14),
+    0 0 80px rgba(61, 223, 224, 0.06),
+    inset 0 0 30px rgba(61, 223, 224, 0.05);
+  /* 切角：右上和左下切掉，工业面板的标准形状 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 22px) 0,
+    100% 22px,
+    100% 100%,
+    22px 100%,
+    0 calc(100% - 22px)
+  );
+  /* 鼠标在屏内移动时倾斜，像一块真的悬浮投影板。
+     幅度见 Panes.tsx（±13°）。perspective 给到 620px 而不是 900px：
+     数值越小透视越强，同样的角度看起来「立」得更明显。 */
+  transform: perspective(620px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y))
+    translateZ(var(--pop)) scale(var(--pop-sc));
+  transform-style: preserve-3d;
+  transition:
+    border-color 0.4s var(--ease),
+    box-shadow 0.4s var(--ease),
+    background 0.25s var(--ease),
+    transform 0.28s var(--ease);
+}
+
+/* ── 开机序列 ────────────────────────────────────────────
+   phase-0  只有一道横扫的亮线（屏体还没展开）
+   phase-1  屏体纵向展开到位，边框亮起
+   phase-2  内容注入（读数行逐条 + 文字逐字打印） */
+
+/* 扫描亮线：屏体就是被它「拉」出来的 */
+.pn-boot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  z-index: 5;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--cyan) 18%,
+    #fff 50%,
+    var(--cyan) 82%,
+    transparent
+  );
+  box-shadow: 0 0 16px var(--cyan);
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.phase-0 .pn-boot {
+  animation: bootLine 0.34s var(--ease) forwards;
+}
+
+@keyframes bootLine {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  40% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* 线扫完后淡出 —— 屏体已经展开，它的任务完成了 */
+.phase-1 .pn-boot,
+.phase-2 .pn-boot {
+  animation: bootLineOut 0.3s var(--ease) forwards;
+}
+
+@keyframes bootLineOut {
+  from {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  to {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+/* 屏体：phase-0 时压成一条线，之后纵向展开。
+   ⚠️ 开机的 scaleY 和鼠标倾斜写在**同一条 transform** 里 ——
+   分成两条的话后者会整个覆盖前者，倾斜或展开必然失效一个。
+   用 --sy 变量传递展开进度，两者相乘。 */
+.phase-0 .pn-inner,
+.pn-inner.phase-0 {
+  --sy: 0.04;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.pn-inner.phase-0 {
+  /* 展开前内容不占位，否则屏体高度会先撑开再压扁，很怪 */
+  max-height: 3px;
+}
+
+.pn-inner {
+  --sy: 1;
+  transform-origin: center;
+  transform: perspective(620px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y))
+    translateZ(var(--pop)) scale(var(--pop-sc)) scaleY(var(--sy));
+  transition:
+    transform 0.34s var(--ease),
+    max-height 0.28s var(--ease),
+    border-color 0.4s var(--ease),
+    box-shadow 0.4s var(--ease),
+    background 0.25s var(--ease);
+}
+
+.pn-inner.phase-1,
+.pn-inner.phase-2 {
+  --sy: 1;
+  max-height: 560px;
+}
+
+/* 内容：phase-2 才淡入 */
+.pn-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+
+.phase-2 .pn-content {
+  opacity: 1;
+}
+
+/* 占位块：文字还没打印出来时撑住高度，避免屏体抖动 */
+.pn-blank {
+  display: block;
+  height: 1em;
+}
+
+/* 当前正对的大洲：整块亮起来，用该板块的主色。
+   ⚠️ 这里必须用 color-mix 而不是写死 rgba —— --accent 是每帧变的，
+   写死的话切板块时球体变色了、小屏还是老颜色，两层对不上。
+   transition 交给 .pn-inner 那条统一的，别在这里再加一遍。 */
+.pane.is-focus .pn-inner {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 18%
+    ),
+    linear-gradient(160deg, rgba(14, 24, 38, 0.52), rgba(5, 11, 20, 0.46));
+  box-shadow:
+    0 0 36px color-mix(in srgb, var(--accent) 20%, transparent),
+    0 0 96px color-mix(in srgb, var(--accent) 8%, transparent),
+    inset 0 0 34px color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.pane:hover .pn-inner,
+.pane:focus-visible .pn-inner {
+  /* 推近 + 放大：鼠标一进来这块屏就「迎上来」。
+     translateZ 走的是 perspective 的深度，和倾斜是同一套 3D，
+     比单纯 scale 更像一块板子转过来对着你。 */
+  --pop: 30px;
+  --pop-sc: 1.02;
+  --spot: 0.26;
+  border-color: var(--cyan);
+  box-shadow:
+    0 0 0 1px rgba(61, 223, 224, 0.42),
+    0 0 70px rgba(61, 223, 224, 0.3),
+    0 22px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  /* ⚠️ hover 中 transform 要跟手（0.07s），松开才慢慢回正（基础的 0.34s）。
+     两边都用 0.34s 的话倾斜永远追不上鼠标，看起来就是「不跟随」。 */
+  transition:
+    transform 0.07s linear,
+    max-height 0.28s var(--ease),
+    border-color 0.4s var(--ease),
+    box-shadow 0.4s var(--ease),
+    background 0.18s var(--ease);
+}
+
+/* 镜面高光：一道跟着鼠标走的白色反光，只在 hover 时出现。
+   有了它，倾斜才像「板子在反光」而不只是几何形变。
+
+   ⚠️ 高光是一个**定尺寸的圆**，靠 transform 挪到光标处；
+   别写成 `radial-gradient(... at var(--mx) var(--my))`。
+   渐变的位置每动一次，浏览器就要把整个 .pn-inner 重绘一遍，
+   而这块上面挂着 backdrop-filter，重绘它很贵 —— 鼠标一进小屏就发涩。
+   transform 走合成器，不碰绘制。 */
+.pn-inner::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px; /* 把圆心对到 transform 的落点上 */
+  border-radius: 50%;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle closest-side,
+    rgba(255, 255, 255, 0.16),
+    transparent 70%
+  );
+  transform: translate3d(var(--mpx), var(--mpy), 0);
+  transition: opacity 0.25s var(--ease);
+}
+
+.pane:hover .pn-inner::after,
+.pane:focus-visible .pn-inner::after {
+  opacity: 1;
+}
+
+/* 内容层做反向视差：屏体往左倾时文字往右挪一点，
+   于是文字像浮在屏面**上方**，而不是印在屏面上。
+   幅度只有 ±7px —— 再大就和边框错位得能看出来了。 */
+.pane:hover .pn-content,
+.pane:focus-visible .pn-content {
+  transform: translate3d(calc(var(--px) * 7px), calc(var(--py) * 7px), 0);
+  transition:
+    opacity 0.3s var(--ease),
+    transform 0.07s linear;
+}
+
+/* 水印编号往反方向挪得更多，两层错开就有厚度 */
+.pane:hover .pn-ghost,
+.pane:focus-visible .pn-ghost {
+  transform: translate3d(calc(var(--px) * -12px), calc(var(--py) * -12px), 0);
+  transition:
+    color 0.4s var(--ease),
+    transform 0.07s linear;
+}
+
+/* 四角 L 标 */
+.pn-frame {
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+}
+
+.phase-1 .pn-frame,
+.phase-2 .pn-frame {
+  opacity: 1;
+}
+
+.pn-c {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--cyan);
+  opacity: 0.6;
+  transition:
+    opacity 0.4s var(--ease),
+    border-color 0.4s var(--ease);
+}
+.pn-c.tl {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+.pn-c.tr {
+  top: 0;
+  right: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+.pn-c.bl {
+  bottom: 0;
+  left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+.pn-c.br {
+  bottom: 0;
+  right: 0;
+  border-left: 0;
+  border-top: 0;
+}
+
+.pane.is-focus .pn-c {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+/* 扫描线：缓慢下移，让屏幕「通电」 */
+.pn-scan {
+  position: absolute;
+  inset-inline: 0;
+  height: 46%;
+  pointer-events: none;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(61, 223, 224, 0.075),
+    transparent
+  );
+  animation: paneScan 4.2s linear infinite;
+}
+
+@keyframes paneScan {
+  from {
+    transform: translateY(-110%);
+  }
+  to {
+    transform: translateY(300%);
+  }
+}
+
+/* 网格底纹：CRT 扫描线质感 */
+.pn-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(61, 223, 224, 0.05) 0 1px,
+    transparent 1px 4px
+  );
+}
+
+/* 巨大的半透编号水印 */
+.pn-ghost {
+  position: absolute;
+  right: -8px;
+  bottom: -28px;
+  z-index: -1;
+  font-family: var(--font-mono);
+  font-size: 6.4rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: rgba(61, 223, 224, 0.055);
+  pointer-events: none;
+  transition: color 0.4s var(--ease);
+}
+
+.pane.is-focus .pn-ghost {
+  color: rgba(255, 180, 84, 0.075);
+}
+
+/* 顶部状态条：指示灯 + 编号 + 延伸线 + 信号标 */
+.pn-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pn-led {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: blink 2.2s ease-in-out infinite;
+}
+
+.pane.is-focus .pn-led {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.pn-no {
+  flex: none;
+  font-size: 0.6rem;
+  color: var(--cyan);
+  letter-spacing: 0.16em;
+}
+
+.pane.is-focus .pn-no {
+  color: var(--accent);
+}
+
+.pn-bar-line {
+  flex: 1;
+  height: 1px;
+  min-width: 10px;
+  background: linear-gradient(to right, var(--line), transparent);
+}
+
+.pn-sig {
+  flex: none;
+  font-size: 0.52rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+}
+
+.pn-label {
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+  min-height: 1.25em;
+}
+
+.pn-tag {
+  font-size: 0.78rem;
+  line-height: 1.68;
+  color: var(--ink-dim);
+  min-height: 2.5em;
+}
+
+/* 打字光标 */
+.pn-caret {
+  display: inline-block;
+  width: 7px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--cyan);
+  animation: caret 0.85s steps(2) infinite;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* 读数行：左标签 · 点线 · 右数值 */
+.pn-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(61, 223, 224, 0.18);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.pn-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  opacity: 0;
+  animation: rowIn 0.4s var(--ease) forwards;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pn-k {
+  color: var(--ink-faint);
+  font-style: normal;
+  flex: none;
+}
+
+/* 点线填充中间，像仪表盘的读数行 */
+.pn-dots {
+  flex: 1;
+  height: 1px;
+  min-width: 8px;
+  background-image: linear-gradient(
+    to right,
+    var(--line) 0 2px,
+    transparent 2px 5px
+  );
+  background-size: 5px 1px;
+  transform: translateY(-2px);
+}
+
+.pn-v {
+  color: var(--ink-dim);
+  font-style: normal;
+  flex: none;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 读数**值**不跟着 .hud-mono 转大写。
+     左边的标签（MAIL / GITHUB）大写是 HUD 风格，值不行 ——
+     联系板块的值是邮箱和 GitHub 地址，它们大小写敏感，
+     转成 WEIDONG624.HE@GMAIL.COM 既难读又像是错的。 */
+  text-transform: none;
+}
+
+.pane.is-focus .pn-v {
+  color: var(--ink);
+}
+
+.pn-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-end;
+  margin-top: 4px;
+  font-size: 0.62rem;
+  color: var(--cyan);
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+.pn-enter-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* 正对的那块常显「进入」提示，其余靠 hover */
+.pane.is-focus .pn-enter,
+.pane:hover .pn-enter,
+.pane:focus-visible .pn-enter {
+  opacity: 1;
+  transform: none;
+}
+
+.pane.is-focus .pn-enter {
+  color: var(--accent);
+}
+
+/* 打开板块时小屏整体淡出：球缩到左上角，小屏还挂着会飘到内容上 */
+.app.is-open .panes {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--ease);
+}
+
+/* ═══ HUD 外框 ═══════════════════════════════════════════ */
+.hud {
+  position: fixed;
+  inset: 0;
+  /* ⚠️ 必须高于 .sheet(40)。
+     .sheet 改成定高（满屏）之后，它右侧那块不透明底盖住了整个右半屏 ——
+     右下角的时间戳、右侧两个角标全被吃掉，进板块就「时间没了」。
+     HUD 是取景框，本来就该压在所有内容之上；它整层 pointer-events:none，
+     盖上去不影响面板里的任何点击。
+     读数都贴在 16–22px 的边缘，落在 .sheet 的内边距（≥22px）里，不压正文。
+     低于 .orb-nav(45)：那个是要点的，别被这层挡住。 */
+  z-index: 41;
+  pointer-events: none;
+  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+}
+
+.hud-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-strong);
+}
+.hud-corner.tl {
+  top: 16px;
+  left: 16px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.hud-corner.tr {
+  top: 16px;
+  right: 16px;
+  border-left: 0;
+  border-bottom: 0;
+}
+.hud-corner.bl {
+  bottom: 16px;
+  left: 16px;
+  border-right: 0;
+  border-top: 0;
+}
+.hud-corner.br {
+  bottom: 16px;
+  right: 16px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.hud-readout {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.hud-tl {
+  top: 22px;
+  left: 54px;
+}
+.hud-bl {
+  bottom: 22px;
+  left: 54px;
+}
+.hud-br {
+  bottom: 22px;
+  right: 54px;
+}
+
+/* 时间戳里的日期：压暗一档，和走秒的时分秒拉开层次 */
+.hud-date {
+  opacity: 0.62;
+}
+
+/* 日期和时刻之间的短竖线 —— 比空格更像仪表读数 */
+.hud-sep {
+  width: 1px;
+  height: 9px;
+  background: var(--line-strong);
+}
+
+.hud-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.hud-ticks {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  height: 6px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--line) 0 1px,
+    transparent 1px 22px
+  );
+  opacity: 0.7;
+}
+.hud-ticks.top {
+  top: 16px;
+}
+.hud-ticks.bottom {
+  bottom: 16px;
+}
+
+/* 语言切换：嵌在 HUD 左上角。HUD 层是 pointer-events:none，这里开回来 */
+.lang-toggle {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 3px 9px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 14, 22, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease);
+}
+
+.lang-toggle:hover {
+  border-color: var(--line-strong);
+  background: rgba(61, 223, 224, 0.08);
+}
+
+.lang-toggle .is-on {
+  color: var(--cyan);
+}
+
+.lang-sep {
+  width: 1px;
+  height: 9px;
+  background: var(--line);
+}
+
+/* ═══ 自定义光标 ═════════════════════════════════════════ */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 0.3s var(--ease);
+}
+
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+.cursor-dot.is-hover {
+  animation: dotShrink 0.3s var(--ease) forwards;
+}
+
+@keyframes dotShrink {
+  to {
+    width: 3px;
+    height: 3px;
+    margin: -1.5px 0 0 -1.5px;
+  }
+}
+
+.cursor-ring {
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 50%;
+  transition:
+    opacity 0.3s var(--ease),
+    width 0.3s var(--ease),
+    height 0.3s var(--ease),
+    margin 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease);
+}
+
+.cursor-ring.is-hover {
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-color: var(--cyan);
+  background: rgba(61, 223, 224, 0.07);
+}
+
+body.has-cursor,
+body.has-cursor * {
+  cursor: none !important;
+}
+
+/* ═══ 加载遮罩 ═══════════════════════════════════════════ */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 0.8s var(--ease);
+}
+
+.veil.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.veil-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.veil-scan {
+  width: 150px;
+  height: 1px;
+  position: relative;
+  background: var(--line);
+}
+
+.veil-scan::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 42px;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+  animation: veilScan 1.5s var(--ease) infinite;
+}
+
+@keyframes veilScan {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(108px);
+  }
+}
+
+.veil-text {
+  color: var(--ink-faint);
+}
+
+/* ═══ 板块面板 ═══════════════════════════════════════════
+   点小屏之后展开。球缩到左侧继续转（3D 层做的），面板占右侧。 */
+.sheet {
+  position: fixed;
+  z-index: 40;
+  /* ── 定高：所有板块一样高、一样从顶上开始 ──
+     ⚠️ 曾经是 height:auto + 纵向居中。内容少的板块（项目、联系我）
+     整块缩成一小片浮在屏幕中间，标题离顶部老远，
+     和内容多的板块（个人信息、能力）完全不是一个位置 ——
+     切板块时整个面板还会上下跳。
+     现在统一定高：顶边固定，内容一律从上往下排，多了在 .sh-body 内滚动。
+     ⚠️ 别改回 auto —— 用户明确要求「所有板块和个人信息保持同样的高度」。 */
+  top: 50%;
+  right: 0;
+  width: min(76%, 1180px);
+  height: calc(var(--vh) * 100 - 16px);
+  /*
+    ⚠️ 上下边距收窄 → 内容可用高度变大。
+    原来是 32px 边距 + clamp(30,4.5vh,54) 内边距，在 900 高的屏上
+    内容区只剩约 700px，能力板块（域卡 + 标签云 + 详情浮层）很挤。
+    现在边距 16px、内边距上限降到 40 —— 多出约 60px 纵向空间。
+  */
+  max-height: calc(var(--vh) * 100 - 16px);
+  display: flex;
+  flex-direction: column;
+  padding: clamp(22px, 3vh, 40px) clamp(28px, 4vw, 64px);
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(5, 8, 15, 0.72) 12%,
+    rgba(5, 8, 15, 0.93) 30%
+  );
+  /* ⚠️ 居中靠 translateY(-50%)，它必须同时出现在 keyframes 的每一帧里 ——
+     动画期间 transform 被完全覆盖，漏写就会在入场时掉到屏幕下半部。 */
+  transform: translateY(-50%);
+  animation: sheetIn 0.55s var(--ease) both;
+}
+
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(34px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.sh-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sh-no {
+  color: var(--cyan);
+  font-size: 0.8rem;
+}
+
+.sh-rule {
+  width: clamp(24px, 3vw, 48px);
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.sh-title {
+  flex: 1;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* 关闭键。所有板块共用这一处（在 .sheet 的 header 里）。
+   ⚠️ 原来是 34px + --ink-faint 的细线叉，几乎看不见 ——
+   它是「回到球体」的唯一出口，必须一眼找得到。
+   现在：44px（WCAG 2.5.5 的最小触控目标）、青色描边加实底、
+   图标加粗到 2.2、外围一圈微光。 */
+.sh-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  border: 1px solid rgba(61, 223, 224, 0.45);
+  background: rgba(61, 223, 224, 0.1);
+  box-shadow: 0 0 14px rgba(61, 223, 224, 0.16);
+  transition:
+    color 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease),
+    box-shadow 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.sh-close svg {
+  width: 19px;
+  height: 19px;
+  /* 图标本身的线也要加粗 —— 19px 下 1.6 的描边仍然显细 */
+  stroke-width: 2.2;
+}
+
+.sh-close:hover,
+.sh-close:focus-visible {
+  color: var(--bg);
+  border-color: var(--cyan);
+  /* 悬停时反白：青色实底 + 深色叉，是整个面板上最强的一个信号 */
+  background: var(--cyan);
+  box-shadow: 0 0 22px rgba(61, 223, 224, 0.5);
+  transform: rotate(90deg);
+}
+
+.sh-tag {
+  flex: none;
+  margin-top: 10px;
+  color: var(--ink-faint);
+  font-size: 0.86rem;
+}
+
+/* 注册成真正的长度类型，自定义属性才能参与 transition。
+   不注册的话它只是个字符串，渐隐边界会「跳」而不是滑。
+   老浏览器不支持 @property 时降级为瞬间切换，不影响可用性。 */
+@property --fade-t {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-b {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.sh-body {
+  /* .sheet 定高之后，内容区就该吃掉剩下的全部空间：
+     内容从上往下排，多出来的空白留在下面，超了在这里滚。
+     ⚠️ 曾经是 flex:0 1 auto（按内容高）—— 那是配合 auto 高度 + 纵向居中的
+     老布局的。现在面板定高，再按内容高的话短板块的内容会被
+     .sheet 的居中挤到中间去，标题和正文之间莫名空一大截。 */
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: clamp(18px, 2.6vh, 30px);
+  overflow-y: auto;
+  /*
+    ⚠️ 必须显式写 overflow-x: hidden。
+    CSS 规范：overflow-x / overflow-y 一个是 visible、另一个不是时，
+    visible 会被**计算成 auto** —— 只写 overflow-y:auto 会让横向
+    也变成 auto，于是任何一点横向溢出都会冒出一条没必要的横条。
+
+    这里确实有故意溢出的东西：全息预览框用 left/right:calc(100% + 12px)
+    浮到分支外侧。它是 pointer-events:none 的纯装饰，宽度本来就够，
+    不该因为它出现滚动条。
+  */
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 12px;
+  animation: bodyIn 0.6s var(--ease) 0.1s both;
+  /* 上下边缘渐隐 —— 不加的话滚动时文字在容器边界被**硬切**，
+     切到一半的行看着像「多出来的头尾」，很脏。
+     渐隐后内容是淡出视野的，像在一块取景窗里滚动。
+
+     两端各留 --fade-t / --fade-b，由 JS 按滚动位置切换（见 SectionPanel）：
+     滚到顶时上缘不该有渐隐，否则第一行永远是灰的。 */
+  --fade-t: 0px;
+  --fade-b: 28px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-t),
+    #000 calc(100% - var(--fade-b)),
+    transparent 100%
+  );
+  transition:
+    --fade-t 0.2s linear,
+    --fade-b 0.2s linear;
+}
+
+@keyframes bodyIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 细滚动条，不要系统默认那条粗的 */
+.sh-body::-webkit-scrollbar {
+  width: 5px;
+}
+.sh-body::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+}
+.sh-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ═══ 通用文字原子 ═══════════════════════════════════════ */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.chip {
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.badge-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  /* ⚠️ 不要 align-self: flex-start —— 它和 .ph-role 的 align-items:center
+     打架，徽标会顶到职位标签的上边缘对不齐。
+     在 column 布局的父级里靠 margin-right:auto 同样能避免拉伸。 */
+  margin-right: auto;
+  padding: 6px 13px;
+  font-size: 0.66rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(61, 223, 224, 0.06);
+}
+
+.badge-open em {
+  font-style: normal;
+  color: var(--ink-faint);
+  /* 详情（「数据挖掘 · 行业不限」）在窄屏上让位 ——
+     状态标签本身才是主信息，详情是补充。
+     英文文案更长，两者并排在 1200px 档会超出右栏，这里收一档字号。 */
+  font-size: 0.92em;
+}
+
+.pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* ═══ 00 身份 ════════════════════════════════════════════ */
+.pl-hero {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vh, 34px);
+}
+
+/* 上半：头像 | 身份信息。
+   头像给 0.85fr —— 比等分略窄，姓名和职位标签需要横向空间，
+   等分时中文姓名会顶到边缘。 */
+.ph-top {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 40px);
+  align-items: center;
+}
+
+.ph-photo {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, #0b1420, #060a12);
+}
+
+.ph-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 当前照片人脸在约 (54%, 40%)，对准它裁切。换照片时同步改。 */
+  object-position: 54% 40%;
+  display: block;
+  filter: grayscale(0.4) contrast(1.06) brightness(0.95);
+  transition: filter 0.7s var(--ease);
+}
+
+.ph-photo:hover img {
+  filter: none;
+}
+
+.ph-id {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.ph-name {
+  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.ph-char {
+  display: inline-block;
+  animation: charIn 0.7s var(--ease) both;
+}
+
+@keyframes charIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* 职位标签 + 状态徽标，同一行。
+   ⚠️ 原来是 column（职位在上、副标题在下）。现在两者并排，
+   flex-wrap 兜底：窄屏或长文案时状态徽标换到第二行，不会溢出。 */
+.ph-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+/* 职位。
+   ⚠️ 原来是青色实底 + 深色字（像个高亮 chip），太重 ——
+   它和旁边的状态徽标、下面的卡片抢注意力。现在只留文字本身，
+   靠字号和字重立住；CONF 读数用青色和它区分。 */
+.ph-role-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: clamp(0.92rem, 1.15vw, 1.05rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.ph-role-tag b {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+  opacity: 0.8;
+}
+
+/* 事实清单 —— 头像右侧的一列读数。
+   每行是「标签 | 值」，标签定宽对齐，值左对齐成一条整齐的竖线。 */
+.ph-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ph-fact {
+  display: grid;
+  /* 标签定宽 —— 中英文标签长短不一，不定宽的话右侧的值会参差不齐 */
+  grid-template-columns: clamp(46px, 5vw, 64px) 1fr;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ph-fact dt {
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  opacity: 0.78;
+}
+
+.ph-fact dd {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  min-width: 0;
+}
+
+/* 学历：学校 · 专业连成一行，和坐标、经验保持同一档分量 */
+.ph-edu {
+  /* 长文案在窄栏里要能换行，但断点只落在 · 两侧 */
+  overflow-wrap: break-word;
+}
+
+/* ── 四张数字卡片 + 下方展开的横条 ──────────────────────── */
+.ph-stats {
+  position: relative;
+  /*
+    给下方展开的横条预留空间 —— 横条是绝对定位的，
+    不留的话它会盖住后面的内容；留了则展开时布局纹丝不动
+    （sheet 是纵向居中的，高度一变整块就会上下跳）。
+
+    118px = 横条实际高度 ~108px（上下 padding 28 + 边框 2 +
+    文字块 78：标签行 12 + gap 5 + 3 行正文 61）+ 10px 与卡片的间距。
+    ⚠️ 改 .ph-flyout 的 padding / 行数 / 字号，这个数要跟着改。
+  */
+  padding-bottom: 118px;
+}
+
+.ph-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+
+.ph-cardli {
+  min-width: 0;
+}
+
+/* 卡片：编号 + 数字 + 标签。
+   ⚠️ 默认态必须自己立得住 —— 之前底色是几乎透明的渐变、
+   没有边框，四张卡片在深色底上糊成一片，看不出这是四个可交互的块。
+   现在给实底 + 细边框，选中时才提亮，默认和选中都清晰。 */
+.ph-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 16px 15px 15px;
+  border: 1px solid var(--line);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  background: rgba(11, 18, 30, 0.78);
+  transition: background 0.35s var(--ease), border-color 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+/* 顶部指示线。默认是暗的细线，选中时变青并从左扫过去点亮。
+   用伪元素而不是 border-top —— 才能做「扫过去」的过渡。 */
+.ph-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: rgba(232, 238, 245, 0.16);
+}
+
+.ph-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 2px;
+  width: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-dim);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.42s var(--ease);
+}
+
+.ph-card:hover,
+.ph-card.is-on {
+  background: rgba(18, 34, 52, 0.9);
+  border-color: rgba(61, 223, 224, 0.34);
+  /* 选中的卡片微微抬起 —— 和下方横条形成「这张卡打开了」的关系 */
+  transform: translateY(-2px);
+}
+
+.ph-card:hover::after,
+.ph-card.is-on::after {
+  transform: scaleX(1);
+}
+
+/* 卡片序号。用 faint 而不是 ghost —— 「01/02」看着像编号，
+   用户会去读它，读不清就是缺陷。ghost 只留给纯几何装饰。 */
+.ph-card-no {
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  transition: color 0.35s var(--ease);
+}
+
+.ph-card.is-on .ph-card-no {
+  color: var(--cyan);
+}
+
+.ph-card-v {
+  font-size: clamp(1.4rem, 2.1vw, 1.9rem);
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--cyan);
+  text-shadow: 0 0 18px var(--cyan-dim);
+}
+
+/* 标签是要被读的信息 —— 用 --ink-faint（已提到 AA）而不是 ghost。
+   ⚠️ 别加 white-space:nowrap + ellipsis：中文标签「年数据一线」
+   在窄卡片里会被截成「年数据…」，反而看不懂。让它换行。 */
+.ph-card-k {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.45;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transition: color 0.35s var(--ease);
+}
+
+.ph-card.is-on .ph-card-k {
+  color: var(--ink);
+}
+
+/* 指向下方横条的小三角，长在卡片底缘中央。
+   它是「这条横条属于这张卡」的连接线索。 */
+.ph-card-arrow {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-bottom-color: var(--cyan);
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.ph-card.is-on .ph-card-arrow {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/*
+  横条：在卡片下方向下展开。
+  绝对定位 + 上方由 .ph-stats 的 padding-bottom 预留空间 ——
+  这样展开/收起时整个面板的高度完全不变（sheet 是居中的，
+  高度一变整块就会上下跳）。
+*/
+.ph-flyout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 20px;
+  /* 极淡的横向渐变底 + 左缘一条亮边，克制但不寡淡 */
+  background: linear-gradient(
+    to right,
+    rgba(61, 223, 224, 0.07),
+    rgba(6, 11, 20, 0.92) 30%,
+    rgba(5, 9, 16, 0.88)
+  );
+  border: 1px solid rgba(61, 223, 224, 0.18);
+  border-left: 2px solid var(--cyan);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42),
+    inset 0 0 24px rgba(61, 223, 224, 0.04);
+  /* 右上切角，和小屏是同一套工业面板语言 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    0 100%
+  );
+  transform-origin: top center;
+  animation: flyoutIn 0.4s var(--ease) both;
+  /* 纯展示，不抢鼠标 —— 否则它盖住卡片时会触发 mouseleave，
+     导致「展开→立刻消失」的抖动 */
+  pointer-events: none;
+}
+
+/* 从上到下展开：纵向缩放 + 轻微下移。
+   scaleY 从 0.6 起步而不是 0 —— 从 0 拉开时里面的文字会被压成一条线。 */
+@keyframes flyoutIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* 左侧的大数字 —— 和上面选中的卡片呼应 */
+.ph-flyout-v {
+  flex: none;
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-weight: 300;
+  line-height: 1;
+  color: var(--cyan);
+  text-shadow: 0 0 22px var(--cyan-dim);
+}
+
+/* 数字和文字之间的竖分隔线 */
+.ph-flyout-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 18px;
+  border-left: 1px solid rgba(61, 223, 224, 0.16);
+}
+
+.ph-flyout-k {
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+/*
+  描述正文。
+  ⚠️ 必须给 min-height：文字是打字机逐字吐出来的，
+  不定高的话横条会随字数一行行往下长，抖得厉害。
+
+  预留 3 行。实测（按各视口下横条的实际文字宽度换算）：
+  中文最长 74 字始终是 2 行；英文最长 242 字在 ≥1440px 是 2 行，
+  但 1200–1280px 会到 3 行 —— 按 2 行留会被裁掉最后一行。
+*/
+.ph-flyout-d {
+  font-size: 0.78rem;
+  line-height: 1.62;
+  color: var(--ink-dim);
+  min-height: calc(3 * 1.264rem);
+  margin: 0;
+}
+
+/* 打字光标 —— 跟在已打出的文字后面 */
+.ph-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: caretBlink 0.9s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ═══ 02 工作经历 ════════════════════════════════════════ */
+.pl-career {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2.6vh, 30px);
+}
+
+/* ── 曲线时间轴 ──────────────────────────────────────────
+   ⚠️ aspect-ratio 必须和 CareerPanel 的 VB_W:VB_H 一致（1000:120），
+   否则 SVG 按比例缩放后会在容器里留白，节点的百分比定位就对不上曲线。 */
+.cr-curve {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 120;
+  /* 节点的标签要往下伸，给它留出空间 */
+  margin-bottom: clamp(48px, 7vh, 72px);
+}
+
+.cr-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* 底层：完整路径，很淡 —— 它是「整条路」 */
+.cr-track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 高亮层：从起点走到当前节点 */
+.cr-progress {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px var(--cyan-dim));
+  transition: stroke-dashoffset 0.55s var(--ease);
+}
+
+.cr-nodes {
+  position: absolute;
+  inset: 0;
+  list-style: none;
+}
+
+/* 每个节点锚在曲线上的一点；left/top 由 JS 按曲线参数算 */
+.cr-nodeli {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.cr-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 轴上的圆点 */
+.cr-dot {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  transition:
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.cr-dot::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.cr-node:hover .cr-dot {
+  border-color: rgba(61, 223, 224, 0.6);
+}
+
+.cr-node.is-on .cr-dot {
+  border-color: var(--cyan);
+  transform: scale(1.25);
+}
+
+.cr-node.is-on .cr-dot::after {
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+/* 进行中的那段：圆点常驻脉冲 */
+.cr-node.is-current .cr-dot::after {
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+/* 节点标签，挂在圆点下方 */
+.cr-node-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.cr-node-year {
+  font-size: 0.52rem;
+  color: var(--ink-faint);
+  transition: color 0.3s var(--ease);
+}
+
+.cr-node-org {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  transition: color 0.3s var(--ease);
+}
+
+.cr-node-brief {
+  font-size: 0.56rem;
+  color: var(--ink-ghost);
+  transition: color 0.3s var(--ease);
+}
+
+.cr-node.is-on .cr-node-year {
+  color: var(--cyan);
+}
+
+.cr-node.is-on .cr-node-org {
+  color: var(--ink);
+}
+
+.cr-node.is-on .cr-node-brief {
+  color: var(--ink-faint);
+}
+
+/* ── 展开的内容面板 ────────────────────────────────────── */
+.cr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--cyan);
+  background: rgba(9, 15, 25, 0.6);
+  /* 右上切角，和小屏是同一套工业面板形状 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    0 100%
+  );
+  animation: crPanelIn 0.42s var(--ease) both;
+}
+
+@keyframes crPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.cr-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cr-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cr-period {
+  font-size: 0.6rem;
+  color: var(--cyan);
+}
+
+.cr-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  border: 1px solid rgba(255, 180, 84, 0.4);
+}
+
+.cr-org {
+  font-size: clamp(1rem, 1.5vw, 1.22rem);
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.cr-role {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+/* 一句话定位 */
+.cr-summary {
+  padding-left: 14px;
+  border-left: 2px solid rgba(61, 223, 224, 0.25);
+  font-size: 0.84rem;
+  line-height: 1.95;
+  color: var(--ink-dim);
+  max-width: 70ch;
+}
+
+.cr-points {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  max-width: 72ch;
+}
+
+.cr-point {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.cr-point-no {
+  font-size: 0.54rem;
+  line-height: 1.75;
+  color: var(--cyan);
+  opacity: 0.65;
+  text-align: right;
+}
+
+.cr-point-body {
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.85;
+  color: var(--ink-dim);
+}
+
+/*
+  要点的小标题**独占一行**。
+  ⚠️ 别改回和说明同一行加粗 —— 那样标题会被后面几十个字淹没。
+*/
+.cr-point-key {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.cr-point-desc {
+  display: block;
+}
+
+/* 技术栈单独一行，和内容分开 */
+.cr-stack {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.cr-stack-label {
+  flex: none;
+  font-size: 0.5rem;
+  color: var(--ink-faint);
+}
+
+/* ═══ 03 项目 ════════════════════════════════════════════ */
+.pl-work {
+  position: relative;
+}
+
+/* ── 逐级下钻的关系树 ────────────────────────────────────
+   ⚠️ 不把整棵树同屏画出来 —— 三级内容一起铺开时屏幕上是十几个
+   并列的块，层级反而被淹没。改为「已选路径 + 当前层」：
+   路径链表达你在树的哪个位置，舞台只渲染当前这一层。 */
+.wk-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── 已选路径（节点链）── */
+.wk-path {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.wk-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.8);
+  cursor: pointer;
+  transition:
+    color 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease);
+}
+
+.wk-node:hover {
+  color: var(--ink);
+  border-color: rgba(61, 223, 224, 0.35);
+}
+
+/* 末级节点是当前位置，不可点 —— 光标和悬停反馈都要收掉 */
+.wk-node.is-current {
+  cursor: default;
+}
+
+.wk-node.is-current:hover {
+  border-color: rgba(61, 223, 224, 0.5);
+}
+
+.wk-node.is-on {
+  color: var(--cyan);
+  border-color: rgba(61, 223, 224, 0.5);
+  background: rgba(61, 223, 224, 0.09);
+}
+
+.wk-node.is-oss.is-on {
+  color: var(--amber);
+  border-color: rgba(255, 180, 84, 0.5);
+  background: rgba(255, 180, 84, 0.09);
+}
+
+/* 节点上的小圆点 —— 选中时点亮并发光，像链路上的活动节点 */
+.wk-node-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.wk-node.is-on .wk-node-dot {
+  opacity: 1;
+  box-shadow: 0 0 8px currentColor;
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 14px currentColor;
+  }
+}
+
+.wk-node-n {
+  font-size: 0.48rem;
+  opacity: 0.7;
+}
+
+/* 节点之间的连线，带流动的虚线 —— 呼应引线的视觉语言 */
+.wk-path-link {
+  width: 22px;
+  height: 1px;
+  flex: none;
+  background: repeating-linear-gradient(
+    to right,
+    var(--line-strong) 0 4px,
+    transparent 4px 7px
+  );
+  animation: pathFlow 0.9s linear infinite;
+}
+
+@keyframes pathFlow {
+  to {
+    background-position-x: 7px;
+  }
+}
+
+/* ── 当前层的舞台 ── */
+.wk-stage {
+  animation: stageIn 0.4s var(--ease) both;
+}
+
+@keyframes stageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── 可下钻的分支 ── */
+.wk-branches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  list-style: none;
+}
+
+.wk-branch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  height: 100%;
+  /* 分支比项目卡矮一档 —— 它只是个入口，不承载内容 */
+  min-height: clamp(84px, 11vh, 104px);
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.78);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  /* 切右上角 —— 卡片不再是规整矩形，和小屏是同一套工业面板形状 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% 100%,
+    0 100%
+  );
+  transition:
+    background 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+.wk-branch:hover,
+.wk-branch:focus-visible {
+  background: rgba(18, 34, 52, 0.9);
+  border-color: rgba(61, 223, 224, 0.35);
+  transform: translateY(-2px);
+}
+
+.wk-branch.is-oss:hover,
+.wk-branch.is-oss:focus-visible {
+  border-color: rgba(255, 180, 84, 0.4);
+}
+
+/* 三条渐次变短的横线 —— 一个抽象的「分支」符号 */
+.wk-branch-glyph {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  width: 18px;
+}
+
+.wk-branch-glyph i {
+  height: 2px;
+  background: var(--cyan);
+  opacity: 0.5;
+  transition: width 0.35s var(--ease), opacity 0.35s var(--ease);
+}
+
+.wk-branch-glyph i:nth-child(1) {
+  width: 100%;
+}
+.wk-branch-glyph i:nth-child(2) {
+  width: 68%;
+}
+.wk-branch-glyph i:nth-child(3) {
+  width: 40%;
+}
+
+.wk-branch:hover .wk-branch-glyph i {
+  opacity: 1;
+  width: 100%;
+}
+
+.wk-branch.is-oss .wk-branch-glyph i {
+  background: var(--amber);
+}
+
+.wk-branch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wk-branch-label {
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.wk-branch.is-oss .wk-branch-label {
+  color: var(--amber);
+}
+
+.wk-branch-sub {
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+}
+
+.wk-branch-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.wk-branch-go svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wk-branch:hover .wk-branch-go,
+.wk-branch:focus-visible .wk-branch-go {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── 卡片墙 ──────────────────────────────────────────────
+   区内按时间从早到晚、从左到右铺。auto-fit 让宽屏一排铺开、
+   窄屏自动折行，不用为每个断点写死列数。 */
+.wk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  list-style: none;
+}
+
+/* 卡片逐个飘入 —— delay 由 JSX 按索引给，下钻到末层时有「展开」的感觉 */
+.wk-cards > li {
+  animation: cardIn 0.44s var(--ease) both;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wk-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  height: 100%;
+  /*
+    卡片高度。
+    ⚠️ 用 min-height 而不是固定 height —— 概括文案长短不一，
+    固定高度在窄屏上会把文字挤出去。
+    clamp 让它跟着视口走：矮屏不至于占满整屏，宽屏又足够舒展。
+  */
+  min-height: clamp(158px, 22vh, 208px);
+  padding: 18px 19px 16px;
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.78);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  /* 切左下 + 右上两角 —— 打破规整矩形，和小屏同一套语言 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    18px 100%,
+    0 calc(100% - 18px)
+  );
+  transition:
+    background 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+/* 顶部指示线，悬停时从左扫亮 —— 和个人信息的卡片同一套语言 */
+.wk-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 2px;
+  width: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-dim);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.42s var(--ease);
+}
+
+.wk-card:hover,
+.wk-card:focus-visible {
+  background: rgba(18, 34, 52, 0.9);
+  border-color: rgba(61, 223, 224, 0.34);
+  transform: translateY(-3px);
+}
+
+.wk-card:hover::after,
+.wk-card:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.wk-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wk-no {
+  font-size: 0.62rem;
+  color: var(--cyan);
+}
+
+/* 开源 / 公司项目标记。两者要一眼分得开 ——
+   开源可公开源码，内部项目没有外链，这个差别得说清楚。 */
+.wk-kind {
+  font-size: 0.5rem;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.wk-kind.is-oss {
+  color: var(--amber);
+}
+
+.wk-kind.is-internal {
+  color: var(--ink-faint);
+}
+
+.wk-period {
+  font-size: 0.52rem;
+  color: var(--ink-faint);
+}
+
+.wk-card-title {
+  font-size: 0.98rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.wk-card-tag {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  /* 卡片高度要齐 —— 概括长短不一时截到三行 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wk-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.52rem;
+  color: var(--cyan);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.wk-card-cta svg {
+  width: 11px;
+  height: 11px;
+}
+
+.wk-card:hover .wk-card-cta,
+.wk-card:focus-visible .wk-card-cta {
+  opacity: 1;
+  transform: none;
+}
+
+/*
+  详情层。
+  ⚠️ **正常流**，不是绝对定位。
+  曾经是 position:absolute; inset:0 贴在卡片树上 —— 高度被树的高度
+  锁死（约 248px），而详情内容有 700px 左右，溢出的 450px 会和
+  下方内容重叠、或者被裁掉看不见。
+  现在打开详情时树整个 hidden（见 WorkPanel），两者互斥，
+  详情按内容自然撑开，外层 .sh-body 该滚就滚。
+*/
+.wk-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  /*
+    ⚠️ 用 min-height 撑高，不用 flex:1。
+
+    .sh-body 是 flex:0 1 auto（按内容高）—— 它是所有板块共用的，
+    改成 flex:1 会让别的板块内容再少也拉满整屏；而父级没有确定高度，
+    这里写 flex:1 也撑不起来。
+    直接给一个视口相关的下限：笔记本（720–900px 高）上刚好铺满一屏，
+    底栏被推到最下方而不是浮在中间、下面空一片。
+    实测内容框实得高度：720px 屏 → 365px，900px 屏 → 485px。
+  */
+  min-height: min(75vh, 660px);
+  border: 1px solid rgba(61, 223, 224, 0.22);
+  background: linear-gradient(
+    to bottom,
+    rgba(9, 16, 27, 0.99),
+    rgba(6, 11, 20, 0.98)
+  );
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    0 100%
+  );
+  animation: wkDetailIn 0.36s var(--ease) both;
+}
+
+@keyframes wkDetailIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wk-dt-head {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* 给右上角的关闭键让位 */
+  padding-right: 52px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wk-dt-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wk-dt-title {
+  font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.wk-dt-org {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.wk-dt-close {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  border: 1px solid rgba(61, 223, 224, 0.45);
+  background: rgba(61, 223, 224, 0.1);
+  transition:
+    color 0.3s var(--ease),
+    background 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.wk-dt-close svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.2;
+}
+
+.wk-dt-close:hover,
+.wk-dt-close:focus-visible {
+  color: var(--bg);
+  background: var(--cyan);
+  transform: rotate(90deg);
+}
+
+/* 主体：左内容 + 右悬浮按钮列 */
+.wk-dt-main {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+  /*
+    吃掉「详情层减去头部和底栏」之后的全部剩余高度。
+    ⚠️ min-height:0 必须有 —— flex 子项默认 min-height:auto，
+    不置零的话内部的滚动框压不下去，会把详情层顶出容器。
+  */
+  flex: 1;
+  min-height: 0;
+}
+
+.wk-dt-body {
+  min-width: 0;
+  padding-right: 8px;
+  /*
+    ⚠️ 高度跟随父级（.wk-dt-main 已 flex:1 吃满剩余空间），自己滚。
+
+    两件事一起解决：
+    1. 五个分组的内容高度差最大约 196px（有的是一段正文，有的是
+       4 条要点）。若按内容撑开，高度一变纵向居中的 .sheet 就重算
+       位置 —— 表现就是「切 tab 时内容向上顶」。
+    2. 写死 clamp 高度会在笔记本上剩出空档，底栏浮在中间。
+
+    height:100% 让它由容器决定而非内容：切分组时恒定不变，
+    同时任何屏高下都刚好铺满。超出部分在框内滚；分组按钮在框**外**
+    （.wk-dt-main 的另一列），不受影响，不会两条滚动条打架。
+  */
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  animation: wkBodyIn 0.34s var(--ease) both;
+}
+
+/*
+  内容框下缘的渐隐 —— 内容滚动时淡出视野，而不是在底栏边缘被硬切；
+  切到一半的那行看着像「多出来的尾巴」。
+
+  ⚠️ 用覆盖一层渐变的伪元素，不用 mask-image ——
+  mask 会把滚动条一起裁掉，滚动条尾端会莫名其妙淡掉。
+  伪元素挂在 .wk-dt-main 上（.wk-dt-body 自己是滚动容器，
+  贴在它内部的绝对定位元素会跟着内容一起滚走）。
+*/
+.wk-dt-main::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  /* 只盖内容列，别盖右侧的分组按钮 */
+  right: calc(clamp(96px, 11vw, 128px) + 16px);
+  bottom: 0;
+  height: 26px;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(7, 13, 22, 0.98),
+    transparent
+  );
+}
+
+.wk-dt-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.wk-dt-body::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+}
+
+/*
+  切换分组时内容**从上往下滑入**。
+  ⚠️ 之前是 translateX(-8px) 横向滑入，配上高度变化，观感是
+  「内容被向上顶了一下」。改成纵向：新内容从上缘滑下来，
+  和「换了一段内容」这个语义一致。
+*/
+@keyframes wkBodyIn {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── 右侧悬浮的分组按钮 ──────────────────────────────────
+   sticky 让它在内容滚动时留在原位 —— 它是导航，不该跟着走。
+   移入即切换内容（见 WorkPanel 的 onMouseEnter）。 */
+.wk-dock {
+  /* ⚠️ 分组按钮在 .wk-dt-body **之外**（是 .wk-dt-main 的另一列），
+     内容框自己滚动时按钮本来就不动，这里不需要 sticky。
+     保留 align-self:start 让它贴在顶部即可。 */
+  position: static;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: none;
+  width: clamp(96px, 11vw, 128px);
+}
+
+.wk-dock-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.7rem;
+  text-align: left;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.86);
+  cursor: pointer;
+  overflow: hidden;
+  /* 建立层叠上下文，让 ::before 的填充色能盖在按钮底色之上、
+     又压在文字之下。⚠️ 不能给 ::before 用 z-index:-1 ——
+     那会把它压到按钮自身的 background 后面，等于完全看不见。 */
+  isolation: isolate;
+  transition:
+    color 0.28s var(--ease),
+    border-color 0.28s var(--ease),
+    transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+  /* 逐个飘入 —— delay 由 JSX 按索引给 */
+  animation: dockIn 0.42s var(--ease) both;
+}
+
+/* 悬浮感：按钮从右侧飘入就位 */
+@keyframes dockIn {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 底色用伪元素做，才能和 transform 分开过渡 —— 
+   直接过渡 background 到实色会在中途出现浑浊的中间色 */
+.wk-dock-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--cyan);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.3s var(--ease);
+  z-index: 0;
+}
+
+.wk-dock-btn:hover {
+  color: var(--ink);
+  border-color: rgba(61, 223, 224, 0.4);
+  transform: translateX(-3px);
+}
+
+.wk-dock-btn.is-on {
+  color: var(--bg);
+  border-color: var(--cyan);
+  box-shadow: 0 0 20px rgba(61, 223, 224, 0.3);
+  /* 选中的按钮向左探出，指向它管的那块内容 */
+  transform: translateX(-7px);
+}
+
+.wk-dock-btn.is-on::before {
+  transform: scaleX(1);
+}
+
+.wk-dock-no {
+  position: relative;
+  z-index: 1;
+  font-size: 0.48rem;
+  flex: none;
+  opacity: 0.55;
+}
+
+.wk-dock-btn.is-on .wk-dock-no {
+  opacity: 0.75;
+}
+
+.wk-dock-label {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 分组内容 ──────────────────────────────────────────
+   三种内容各有明确形态，之间留足空白 ——
+   原来它们紧挨着堆在一起，读起来是一整片密不透风的字。 */
+
+/* 指标卡：横排，最先看到 */
+.wk-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wk-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--cyan);
+  background: rgba(61, 223, 224, 0.05);
+}
+
+.wk-metric b {
+  font-size: 1.3rem;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--cyan);
+}
+
+.wk-metric span {
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+}
+
+/* 正文：左侧一条竖线标出「这是背景陈述」，和要点区分开 */
+.wk-prose {
+  margin: 0 0 20px;
+  padding-left: 15px;
+  border-left: 2px solid rgba(61, 223, 224, 0.28);
+  font-size: 0.84rem;
+  line-height: 2;
+  color: var(--ink-dim);
+  max-width: 68ch;
+}
+
+/* 正文之后如果还有要点，用一条分隔线断开 */
+.wk-prose:not(:last-child) {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 要点：编号 + 小标题独占一行 + 说明 */
+.wk-points {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  list-style: none;
+  max-width: 72ch;
+}
+
+.wk-point {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.wk-point-no {
+  font-size: 0.56rem;
+  line-height: 1.7;
+  color: var(--cyan);
+  opacity: 0.7;
+  /* 编号右对齐 —— 两位数时和一位数的右缘才能对齐 */
+  text-align: right;
+}
+
+.wk-point-body {
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.85;
+  color: var(--ink-dim);
+}
+
+/*
+  小标题**独占一行**。
+  ⚠️ 别改回和说明同一行加粗 —— 那样标题会被后面几十个字淹没，
+  等于没有标题。拆行后能一眼扫完所有小标题再决定读哪条。
+*/
+.wk-point-key {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.wk-point-desc {
+  display: block;
+}
+
+/*
+  底栏：技术栈 + 外链。
+  ⚠️ 技术栈和内容区必须分开 —— 原来 chips 直接跟在正文后面，
+  8 个 chip 和上方的文字黏成一片，分不清哪些是内容哪些是标签。
+  现在底栏有独立的上边框和背景，技术栈还带一个「技术栈」标题。
+*/
+.wk-dt-foot {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  /*
+    ⚠️ 上边距用负值把底栏往上提，贴住内容框。
+    .wk-detail 的 gap 是 14px，底栏自己还有 13px 内边距 ——
+    两者叠起来在内容和标签之间留出 27px 的空档，看着底栏是浮着的。
+    -14px 抵消掉 gap，内容框的下缘就直接压在底栏的分隔线上，
+    滚动时文字是「滑到标签栏下面去」而不是「停在半空」。
+  */
+  margin: -14px -20px -18px;
+  padding: 11px 20px;
+  border-top: 1px solid var(--line);
+  background: rgba(4, 8, 15, 0.6);
+}
+
+.wk-stack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.wk-stack-label {
+  flex: none;
+  font-size: 0.5rem;
+  color: var(--ink-faint);
+}
+
+.wk-links {
+  display: flex;
+  gap: 10px;
+  flex: none;
+}
+
+.wk-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  font-size: 0.74rem;
+  color: var(--cyan);
+  border: 1px solid rgba(61, 223, 224, 0.4);
+  transition: background 0.3s var(--ease), color 0.3s var(--ease);
+}
+
+.wk-link svg {
+  width: 12px;
+  height: 12px;
+}
+
+.wk-link:hover {
+  color: var(--bg);
+  background: var(--cyan);
+}
+
+/* ═══ 01 能力 ════════════════════════════════════════════ */
+.pl-skills {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 2.8vh, 30px);
+}
+
+/* ── 四个能力域 ────────────────────────────────────────── */
+.sk-domains {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+
+.sk-domain {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 14px 15px;
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.78);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  /* 右上切角，和全站的工业面板同形 */
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  transition:
+    background 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.sk-domain:hover,
+.sk-domain.is-on {
+  background: rgba(18, 34, 52, 0.9);
+  border-color: rgba(61, 223, 224, 0.34);
+  transform: translateY(-2px);
+}
+
+/* 底部指示条，选中时从左扫亮 */
+.sk-dm-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-dim);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.4s var(--ease);
+}
+
+.sk-domain.is-on .sk-dm-bar {
+  transform: scaleX(1);
+}
+
+.sk-dm-no {
+  flex: none;
+  font-size: 0.5rem;
+  color: var(--ink-faint);
+  transition: color 0.3s var(--ease);
+}
+
+.sk-domain.is-on .sk-dm-no {
+  color: var(--cyan);
+}
+
+.sk-dm-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  color: var(--ink-dim);
+  transition: color 0.3s var(--ease);
+}
+
+.sk-domain.is-on .sk-dm-label {
+  color: var(--ink);
+}
+
+.sk-dm-n {
+  flex: none;
+  font-size: 0.52rem;
+  color: var(--ink-ghost);
+}
+
+/* ── 当前域的内容 ──────────────────────────────────────── */
+.sk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /*
+    各部分（caption / 标签云 / 详情区）都已各自定高，
+    这里不再需要 min-height —— 总高恒定，切 tab 不会跳。
+  */
+  animation: skBodyIn 0.36s var(--ease) both;
+}
+
+@keyframes skBodyIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 一句话说明「强在哪」，左侧竖线 */
+.sk-caption {
+  padding-left: 14px;
+  border-left: 2px solid rgba(61, 223, 224, 0.28);
+  font-size: 0.84rem;
+  line-height: 1.9;
+  color: var(--ink-dim);
+  max-width: 70ch;
+  /*
+    ⚠️ 定高 2 行。四个域的 caption 是 52–66 字，在不同宽度下可能
+    折成 2 行或 3 行 —— 行数一变，切 tab 时整块高度就变，
+    而 .sheet 是纵向居中的（top:50% + translateY(-50%)），
+    高度变化会让整个面板上下移动。
+    超出 2 行的部分裁掉：caption 是补充说明，不是必读内容。
+  */
+  height: calc(2 * 1.9 * 0.84rem);
+  overflow: hidden;
+}
+
+/* ── 技能标签云 ────────────────────────────────────────
+   ⚠️ 取代了原来的 21 条进度条：那些 level 全在 0.68–0.95，
+   条长几乎一样，既占掉 90% 的视觉重量又给不出任何区分度。
+   标签云保留全部信息，视觉元素却少了四分之三。 */
+.sk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 9px;
+  list-style: none;
+  /*
+    ⚠️ 定高 2 行。各域条目数是 5–6 个、标签宽窄不一，
+    换行数会随内容和视口变化 —— 行数一变高度就变，
+    切 tab 时整个面板会跟着上下移动（.sheet 纵向居中）。
+    按 2 行锁死：单个标签 40px（含边框）+ 行间 gap 9px。
+    ⚠️ 改标签的 padding / 字号时这个值要跟着算。
+  */
+  height: calc(2 * 40px + 9px);
+  overflow: hidden;
+}
+
+.sk-tag {
+  /* button 重置 —— 改成 button 才能被键盘聚焦、触屏点击展开详情。
+     ⚠️ 单行、统一高度：去掉 note 之后所有卡片形态一致，
+     不再高矮不齐。详情走移入的浮层。 */
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.6);
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
+  animation: skTagIn 0.34s var(--ease) both;
+}
+
+@keyframes skTagIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 重点技能：青色描边 + 淡底，一眼分出主次 */
+.sk-tag.is-key {
+  border-color: rgba(61, 223, 224, 0.42);
+  background: rgba(61, 223, 224, 0.08);
+}
+
+.sk-tag:hover {
+  border-color: rgba(61, 223, 224, 0.55);
+}
+
+.sk-tag-name {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+}
+
+.sk-tag.is-key .sk-tag-name {
+  color: var(--ink);
+}
+
+/* ── 标签的详情区 ──────────────────────────────────────
+   三条优势（跨域可迁移 / 从数据到结论 / 工具化的习惯）已融进
+   各标签的 detail，不再单独占一块。
+
+   ⚠️ 这是**常驻的固定区域**，不是浮在标签上的气泡。
+   曾经用 absolute 浮层挂在每个标签下面，症状是移入时页面向上弹、
+   靠底部的浮层被裁掉像消失了。原因：absolute 虽不占布局，但溢出
+   部分仍计入滚动容器的 scrollHeight —— .sh-body 一变高，
+   纵向居中的 .sheet 就重算位置。
+   固定区域 + min-height 之后，移入移出布局完全不动。 */
+/*
+  详情区。
+
+  ⚠️ **高度恒定、始终占位**，展开与否只改可见性。
+  .sheet 是 top:50% + translateY(-50%) 纵向居中的 —— 高度增加 H 会让
+  整块上移 H/2。所以这块只要「从无到有」，页面就会向上顶一下。
+  常驻占位之后，展开动画只作用于内部文字，容器高度全程不变。
+
+  ⚠️ 同理不能改回绝对定位的浮层：absolute 不占父级布局，
+  但溢出部分仍计入滚动容器的 scrollHeight，一样会撑高 .sh-body。
+*/
+.sk-detail {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  /*
+    按最长的一条预留。中文最长约 96 字，在 72ch 宽下是 3 行；
+    英文更长但字符窄，同样落在 3 行内。留 4 行余量。
+  */
+  min-height: calc(4 * 1.85 * 0.82rem + 26px);
+  padding: 13px 16px;
+  /* ⚠️ 边框和底色不写在本体上，全挪到 ::before ——
+     「框」要能自己从左往右拉开，而本体是要占住高度不动的那层。
+     写在本体上就只能整块 scaleX，那会把文字一起压扁。 */
+}
+
+/*
+  框体：默认收成顶上一道 3px 的横条，选中/移入时**由上往下**拉开到满高。
+
+  ⚠️ 动的是 height 而不是 transform: scaleY ——
+  · scaleY 会把 1px 的边框和 12px 的切角一起纵向压扁，
+    收起态那道横条糊成一团，展开过程中切角的角度也是歪的
+  · 这层是绝对定位的空伪元素，改 height 不会引起任何文字重排
+  ⚠️ 别把动画加回本体：本体要稳稳占住 4 行的高度不动，
+  它一变高，下面的滚动高度就跟着抖。
+*/
+.sk-detail::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--line);
+  background: rgba(9, 15, 25, 0.28);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  transition:
+    height 0.42s var(--ease),
+    border-top-color 0.35s var(--ease),
+    background 0.35s var(--ease);
+}
+
+/* 选中：横条向下拉开成框 + 点亮上缘 */
+.sk-detail.is-on::before {
+  height: 100%;
+  border-top-color: var(--cyan);
+  background: rgba(9, 15, 25, 0.55);
+}
+
+/*
+  文字从左到右扫出。
+  ⚠️ 用 clip-path 而不是 width/scaleX：
+  · width 动画会让文字每帧重新折行，看着在抖
+  · scaleX 会把文字横向拉扁再回弹
+  clip-path 只裁剪显示区域，文字排版全程不变。
+
+  ⚠️ delay 0.3s：先等横条由上往下拉开（0.42s 的七成），再印字 ——
+  「框展开 → 内容出现」这个先后是用户明确要的，
+  同时开始的话文字会跑在框前头，看着像文字自己浮在空中。
+  ⚠️ z-index 1：::before 是定位元素，不给文字提层的话框会盖住字。
+*/
+.sk-dt-text {
+  position: relative;
+  z-index: 1;
+  font-size: 0.82rem;
+  line-height: 1.85;
+  color: var(--ink-dim);
+  max-width: 72ch;
+  animation: skDetailIn 0.42s var(--ease) 0.3s both;
+}
+
+@keyframes skDetailIn {
+  from {
+    opacity: 0.3;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.sk-tag.is-open {
+  border-color: var(--cyan);
+  background: rgba(61, 223, 224, 0.13);
+}
+
+.sk-tag.is-open .sk-tag-name {
+  color: var(--ink);
+}
+
+/* ── 下载 PDF 简历 ───────────────────────────────────────
+   整站的主行动号召，两处在用（联系我板块、个人信息板块）。
+   ⚠️ 颜色全走 var(--accent) —— 它每帧跟着当前板块变，
+   写死青色的话在别的板块里会和整体调子对不上。 */
+.dl-resume {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  align-self: flex-start;
+  padding: 14px 22px 14px 16px;
+  overflow: hidden;
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 60%
+    ),
+    rgba(9, 16, 27, 0.72);
+  /* 右上切角，和小屏、卡片是同一套工业面板形状 */
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  transition:
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease),
+    box-shadow 0.3s var(--ease),
+    transform 0.2s var(--ease);
+}
+
+.dl-resume:hover,
+.dl-resume:focus-visible {
+  border-color: var(--accent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 22%, transparent),
+      transparent 62%
+    ),
+    rgba(12, 21, 34, 0.86);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 14px 38px rgba(0, 0, 0, 0.5),
+    0 0 40px color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translateY(-2px);
+}
+
+.dl-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+
+.dl-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* 移入时箭头往下顿一下 —— 「下载」这个动作本身的隐喻 */
+.dl-resume:hover .dl-icon svg,
+.dl-resume:focus-visible .dl-icon svg {
+  animation: dlNudge 0.6s var(--ease);
+}
+
+@keyframes dlNudge {
+  40% {
+    transform: translateY(3px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.dl-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dl-text b {
+  font-weight: 500;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+
+.dl-text em {
+  font-style: normal;
+  font-size: 0.58rem;
+  color: var(--ink-faint);
+}
+
+/* 一道扫过去的光，和小屏的开机扫描线同一套语言。
+   ⚠️ 只在 hover 时跑一次，不做无限循环 —— 常驻动画在这个尺寸上很吵。 */
+.dl-sweep {
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    transparent
+  );
+  opacity: 0;
+}
+
+.dl-resume:hover .dl-sweep,
+.dl-resume:focus-visible .dl-sweep {
+  animation: dlSweep 0.75s var(--ease);
+}
+
+@keyframes dlSweep {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(360%);
+  }
+}
+
+/*
+  紧凑版：挂在板块导航列表下面，首页和板块内都在。
+
+  ⚠️ 尺寸要压到和导航项同一量级（字号 0.72rem / 行高一档），
+  大一号就会把那列读数压住、变成整屏最抢眼的东西 ——
+  它是常驻入口，不是主视觉。
+  ⚠️ 左边缘：.on-item 的左内边距是 0，文字直接从 --nav-x 起排；
+  这颗按钮有边框，所以让**边框**落在那条线上，文字自然缩进一点。
+  两者的视觉左缘是对齐的。
+*/
+.dl-resume.is-compact {
+  /* 和列表拉开一段 —— 它不是第六个板块，是另一类东西，
+     贴太近会被误读成导航的一项 */
+  margin-top: 26px;
+  gap: 8px;
+  padding: 6px 12px 6px 7px;
+}
+
+.dl-resume.is-compact .dl-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dl-resume.is-compact .dl-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dl-resume.is-compact .dl-text b {
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+/* 板块内：导航是一块半透明面板，间距比首页收一档 ——
+   那时整块要贴着球下方，留白太多会掉出视觉范围 */
+.orb-nav.is-docked .dl-resume {
+  margin-top: 18px;
+}
+
+/* ═══ 05 联系 ════════════════════════════════════════════ */
+.pl-contact {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3.4vh, 40px);
+  align-items: flex-start;
+}
+
+.ct-note {
+  max-width: 58ch;
+  color: var(--ink-dim);
+  line-height: 1.9;
+  font-size: 1.02rem;
+}
+
+/* 联系方式卡片。
+   ⚠️ 原来是一列贴着的细行（只有分隔线），三条挤在一起像个列表项，
+   和「整站唯一的行动号召」这个定位不匹配。
+   现在是自适应网格：宽屏并排三张卡，窄屏自动堆叠。 */
+.ct-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: 12px;
+  width: 100%;
+  list-style: none;
+}
+
+.ct-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  background: rgba(11, 18, 30, 0.72);
+  overflow: hidden;
+  transition:
+    background 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+/* 左缘的一道青色竖条，悬停时从中间向两端拉开 —— 
+   比整块变色克制，又足够说明「这一项被指着」。 */
+.ct-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-dim);
+  transform: scaleY(0);
+  transition: transform 0.35s var(--ease);
+}
+
+.ct-link:hover,
+.ct-link:focus-visible {
+  background: rgba(18, 34, 52, 0.86);
+  border-color: rgba(61, 223, 224, 0.34);
+  transform: translateY(-2px);
+}
+
+.ct-link:hover::before,
+.ct-link:focus-visible::before {
+  transform: scaleY(1);
+}
+
+/* 图标装在一个方框里 —— 裸图标在卡片里显得飘 */
+.ct-icon-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(61, 223, 224, 0.24);
+  background: rgba(61, 223, 224, 0.08);
+  transition: background 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+
+.ct-link:hover .ct-icon-box {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.ct-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--cyan);
+  transition: color 0.35s var(--ease);
+}
+
+.ct-link:hover .ct-icon {
+  color: var(--bg);
+}
+
+.ct-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* 类型标签（电话 / 邮箱 / 代码仓库）——
+   一串号码和一个邮箱并排时，不标类型就得靠图标猜。 */
+.ct-kind {
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  color: var(--cyan);
+  opacity: 0.85;
+}
+
+/* ⚠️ 不用 nowrap + ellipsis：截断的邮箱地址等于没有。
+   邮箱有 24 个字符，卡片放不下时应该换行而不是截掉。 */
+.ct-label {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ct-arrow {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--cyan);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+
+.ct-link:hover .ct-arrow,
+.ct-link:focus-visible .ct-arrow {
+  opacity: 1;
+  transform: none;
+}
+
+/* ═══ 无 WebGL 降级导航 ═══════════════════════════════════
+   球体是全站唯一入口 —— 它没了必须有替代品，否则页面完全不可用 */
+.fallback-nav {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--pad-x);
+}
+
+.fallback-nav ul {
+  list-style: none;
+  width: min(560px, 100%);
+  border-top: 1px solid var(--line);
+}
+
+.fallback-nav button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-areas:
+    'no label'
+    'no tag';
+  gap: 2px 14px;
+  padding: 16px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.35s var(--ease);
+}
+
+.fallback-nav button:hover {
+  background: rgba(61, 223, 224, 0.05);
+}
+
+.fallback-nav button > span:first-child {
+  grid-area: no;
+  align-self: center;
+  color: var(--cyan);
+}
+
+.fallback-nav button > span:nth-child(2) {
+  grid-area: label;
+  font-size: 1rem;
+}
+
+.fallback-nav button em {
+  grid-area: tag;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 平板 768–1199px ─────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1199px) {
+  /* ⚠️ 这里曾经写死过 .pane { width: 200px }，是早期「小屏跟着球转、
+     一次显示多块」那版的残留。它一直静默覆盖着主规则的 660px ——
+     在平板宽度下小屏永远是个 200px 的窄条。别再加死宽度到这里。 */
+
+  /* 平板上给得更满 —— 屏幕本来就窄 */
+  .sheet {
+    width: min(82%, 860px);
+  }
+
+  /* 平板：卡片两列，详情层的分组按钮收窄 */
+  .wk-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wk-dock {
+    width: 92px;
+  }
+
+  .wk-dock-btn {
+    font-size: 0.66rem;
+    padding: 8px 9px;
+  }
+}
+
+/* ── 手机 <768px ─────────────────────────────────────────
+   球缩小上移当视觉引子，小屏改为下方可滚卡片列表。
+   小屏跟着球转在小屏幕上是灾难：6 块 228px 的卡片会互相叠死。 */
+@media (max-width: 767px) {
+  /* 手机也走「一次一块 + 居中」的模式 —— 和桌面一致。
+     旧版在这里改成了可滚卡片列表，那和分镜巡航是两套逻辑，
+     而且用户明确要求「每次只展示一个」。
+     JS 已经把小屏钉在视口中央并夹住了偏移量（见 paneOffsetPx），
+     这里只需要把尺寸和字号收一档。 */
+  .pane {
+    width: min(290px, 86vw);
+  }
+
+  .pn-inner {
+    padding: 16px 17px 13px;
+  }
+
+  .pn-content {
+    gap: 9px;
+  }
+
+  .pn-label {
+    font-size: 1.14rem;
+  }
+
+  .pn-tag {
+    font-size: 0.74rem;
+    min-height: 2.4em;
+  }
+
+  .pn-readouts {
+    font-size: 0.64rem;
+    gap: 5px;
+    padding-top: 9px;
+  }
+
+  .pn-ghost {
+    font-size: 5rem;
+    bottom: -18px;
+  }
+
+  /* 引线在小屏上很短（球也小），细一点不喧宾夺主 */
+  .pn-lead line {
+    stroke-dasharray: 4 3;
+  }
+
+  /*
+    面板改为**底部抽屉**，不再满屏。
+
+    ⚠️ 原来是 top:0 + height:100vh + 不透明底 —— 打开板块后地球和
+    小屏被完全盖住，手机上等于整个 3D 层白做了。
+    现在只占下方 78%，顶部留出一条给球；底色带一点透明 + 模糊，
+    球在背后隐约可见，「从球里拉出一张卡」的关系还在。
+  */
+  .sheet {
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    height: 78%;
+    height: calc(var(--vh) * 78);
+    max-height: none;
+    transform: none;
+    padding: 16px var(--pad-x) max(16px, env(safe-area-inset-bottom));
+    background: linear-gradient(
+      to bottom,
+      rgba(5, 8, 15, 0.94),
+      rgba(5, 8, 15, 0.99) 12%
+    );
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line-strong);
+    animation-name: sheetInMobile;
+  }
+
+  /* 抽屉顶部的拖拽提示条 —— 一眼看出这是可以关掉的一层 */
+  .sheet::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    width: 34px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line-strong);
+    transform: translateX(-50%);
+  }
+
+  /* 手机上内容区回到「撑满剩余空间」—— 满屏布局下它就是滚动容器 */
+  .sh-body {
+    flex: 1;
+  }
+
+  @keyframes sheetInMobile {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .sh-title {
+    font-size: 1.3rem;
+  }
+
+  /* HUD 精简：小屏上四角读数会挤成一团 */
+  .hud-ticks,
+  .hud-bl,
+  .hud-br {
+    display: none;
+  }
+
+  /*
+    窄屏：导航在板块内是**底部横条**（一行五个），
+    按钮挂在它下面会把整条撑高、盖住抽屉顶部。这里收起来。
+    ⚠️ 收起来意味着手机上没有下载入口 —— 这是已知取舍：
+    手机端下载 PDF 本来就少见，真要下也会先转到桌面。
+  */
+  .orb-nav .dl-resume {
+    display: none;
+  }
+
+  .hud-tl {
+    left: 40px;
+    top: 16px;
+  }
+
+  .hud-corner {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* 手机：两列折成单栏 */
+  .ph-top {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* 头像单栏时会铺满整宽、太高，压扁一点并限制最大宽度 */
+  .ph-photo {
+    aspect-ratio: 3 / 2;
+    max-width: 320px;
+  }
+
+  /* 四张卡片折成 2×2 —— 一行四张在窄屏上每张只有 80px，
+     数字和标签都挤成一团 */
+  .ph-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ph-card {
+    padding: 12px 12px 11px;
+  }
+
+  /* 窄屏一行字少得多，正文要留更多行 */
+  .ph-flyout {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .ph-flyout-text {
+    padding-left: 12px;
+  }
+
+  .ph-flyout-d {
+    min-height: calc(6 * 1.264rem);
+  }
+
+  /* 预留空间跟着正文行数一起加：
+     横条高 ≈ 28+2+(12+5+121) = 168 → 加 10px 间距 */
+  .ph-stats {
+    padding-bottom: 178px;
+  }
+
+  /*
+    手机：板块导航改为**底部固定的横向条**。
+
+    ⚠️ 原来是 display:none —— 窄屏上根本没有导航，只能靠小屏或
+    关闭键进出，板块之间没法直接跳。左侧竖列在窄屏确实放不下，
+    但「不显示」不是答案：换个形态就行。
+    底部条是拇指最容易够到的位置，也不占内容区的横向空间。
+  */
+  /*
+    ⚠️ 导航吸附在**抽屉顶部**，不是屏幕底部。
+    面板改成占下方 78% 的抽屉后，屏幕底部那条会和抽屉的内容、
+    以及 iOS 的手势条挤在一起；而抽屉顶部正好是「板块标题」上方，
+    切板块的入口紧挨着当前板块名，位置关系最直观。
+    只在打开板块时显示（首页不需要 —— 那时直接转球或点小屏）。
+  */
+  .orb-nav {
+    display: none;
+  }
+
+  .orb-nav.is-docked {
+    display: block;
+    left: 0;
+    right: 0;
+    /* 抽屉高 78%，导航压在它上沿 */
+    top: auto;
+    bottom: calc(var(--vh) * 78);
+    transform: none;
+    padding: 5px 8px;
+    background: rgba(8, 13, 22, 0.96);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-strong);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .orb-nav.is-home ul,
+  .orb-nav.is-docked ul {
+    flex-direction: row;
+    gap: 2px;
+    border: 0;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .orb-nav li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .on-item,
+  .orb-nav.is-home .on-item {
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 7px 2px;
+    font-size: 0.6rem;
+    background: none;
+    box-shadow: none;
+  }
+
+  /* 横排时指示条改到顶部 —— 左缘那条在并排布局里像分隔线 */
+  .on-item.is-on,
+  .orb-nav.is-home .on-item.is-on {
+    background: rgba(61, 223, 224, 0.1);
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+
+  .on-item:hover,
+  .orb-nav.is-home .on-item:hover {
+    padding-left: 2px;
+  }
+
+  .on-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* 竖列专用的伸缩指示线在横排里没有意义 */
+  .on-bar {
+    display: none;
+  }
+
+  /* 导航移到抽屉顶部后，底部不再需要额外让位 */
+
+  /*
+    ── 触控目标 ──
+    WCAG 2.5.5 建议 ≥44×44。实测这几处在窄屏只有 34–42px，
+    手指点不准（尤其 .wk-dock-btn 只有 34px）。统一补到 44。
+    桌面不受影响 —— 这些规则只在窄屏断点里。
+  */
+  .on-item,
+  .sk-domain,
+  .sk-tag,
+  .wk-dock-btn,
+  .cr-node {
+    min-height: 44px;
+  }
+
+  .sk-tag {
+    padding: 12px 14px;
+  }
+
+  .wk-dock-btn {
+    padding: 12px 12px;
+  }
+
+  /*
+    ── 横向滚动的可发现性 ──
+    分组按钮条和经历节点条在窄屏是横向滚动的，但滚动条被隐藏了，
+    用户看不出「右边还有」。右缘加一道渐隐，暗示可以划。
+  */
+  .wk-dock,
+  .cr-nodes {
+    position: relative;
+    /* 惯性滚动，iOS 上手感差别很明显 */
+    -webkit-overflow-scrolling: touch;
+    /* 划到某一项就停在那，不会停在两项中间 */
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 22px),
+      transparent 100%
+    );
+  }
+
+  .wk-dock-btn,
+  .cr-nodeli {
+    scroll-snap-align: start;
+  }
+
+  /*
+    手机：曲线放弃，改为横排可滚的节点条。
+    ⚠️ 1000:120 的曲线在 375px 宽下高度只有 45px，三个带标签的节点
+    根本挤不开；而节点标签是这个交互的主要信息，不能压缩。
+  */
+  .cr-curve {
+    aspect-ratio: auto;
+    margin-bottom: 16px;
+  }
+
+  .cr-svg {
+    display: none;
+  }
+
+  .cr-nodes {
+    position: static;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .cr-nodes::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cr-nodeli {
+    position: static;
+    transform: none;
+    flex: 1 1 0;
+    min-width: 88px;
+  }
+
+  .cr-node {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    background: rgba(11, 18, 30, 0.8);
+    white-space: normal;
+  }
+
+  .cr-node.is-on {
+    border-color: var(--cyan);
+    background: rgba(61, 223, 224, 0.08);
+  }
+
+  .cr-node-text {
+    align-items: flex-start;
+  }
+
+  .cr-panel {
+    padding: 16px 15px;
+  }
+
+  .cr-point {
+    grid-template-columns: 20px 1fr;
+    gap: 9px;
+  }
+
+  /* 手机：分支和卡片都单列 */
+  .wk-branches,
+  .wk-cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* 路径链在窄屏可能换行，缩一档并允许折行 */
+  .wk-node {
+    padding: 6px 10px;
+    font-size: 0.66rem;
+  }
+
+  .wk-path-link {
+    width: 14px;
+  }
+
+  /*
+    详情层在窄屏上改为**整屏固定**而不是盖住卡片区。
+    卡片区在手机上只有一列、高度随内容而变，absolute inset:0
+    会让详情层高度不可控（内容多时溢出、少时被压扁）。
+  */
+  /*
+    手机：详情改为整屏固定层。
+    ⚠️ 这里是 fixed，自身必须能滚 —— 桌面端详情在正常流里靠
+    .sh-body 滚动，但 fixed 脱离了那个容器。
+  */
+  .wk-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: max(16px, env(safe-area-inset-top)) 16px
+      max(16px, env(safe-area-inset-bottom));
+    clip-path: none;
+  }
+
+  /*
+    分组按钮从右侧竖列改为顶部横排 —— 竖列在窄屏会吃掉
+    近三分之一宽度，正文只剩不到 200px。
+  */
+  .wk-dt-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  /*
+    手机：详情本身是整屏 fixed 层、自己能滚，
+    内容框不该再定高 —— 那会在小屏上挤出一个小窗口，
+    读几行就要在框内滚，很难受。
+    ⚠️ 桌面的 min-height/height:100% 这条链在这里全部要解开。
+  */
+  .wk-detail {
+    min-height: 0;
+  }
+
+  .wk-dt-main {
+    flex: none;
+  }
+
+  .wk-dt-body {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* 内容框不再滚动，下缘渐隐就没有意义了 */
+  .wk-dt-main::after {
+    display: none;
+  }
+
+  .wk-dock {
+    position: static;
+    order: -1;
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .wk-dock::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wk-dock-btn {
+    flex: none;
+    white-space: nowrap;
+    font-size: 0.66rem;
+  }
+
+  /* 横排时不要向左探出 —— 那是竖列指向右侧内容用的 */
+  .wk-dock-btn.is-on {
+    transform: none;
+  }
+
+  /* 能力：域卡片两列、优势单列 */
+  .sk-domains {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /*
+    ⚠️ 窄屏**取消所有固定高度**，让内容自然流动。
+
+    桌面那套定高是为了「切 tab 时页面不跳」——.sheet 纵向居中，
+    高度一变整块就重算位置。但手机上 .sheet 是底部抽屉、位置固定，
+    内容本来就在抽屉内滚动，高度变化不会移动任何东西。
+    继续沿用定高的后果：四项加起来 545px，而抽屉内容区只有
+    393–531px，直接溢出，内容被裁、看着拥挤。
+  */
+  .sk-tags,
+  .sk-caption {
+    height: auto;
+    overflow: visible;
+  }
+
+  .sk-detail {
+    min-height: 0;
+  }
+
+  .sk-body {
+    min-height: 0;
+  }
+
+  /* 未选中详情时不占位，省下的空间留给标签 */
+  .sk-detail:not(.is-on) {
+    display: none;
+  }
+
+  .sk-domain {
+    padding: 11px 11px 12px;
+  }
+
+  .sk-dm-label {
+    font-size: 0.76rem;
+  }
+
+  /* 窄屏：详情区行数更多，高度放宽 */
+  .sk-detail {
+    min-height: calc(6 * 1.85 * 0.82rem + 24px);
+    padding: 11px 13px;
+  }
+}
+
+/* ── 矮屏（≤700px 高）：压缩纵向间距 ────────────────────── */
+@media (min-width: 768px) and (max-height: 700px) {
+  .sheet {
+    padding-top: clamp(20px, 3vh, 34px);
+    padding-bottom: clamp(20px, 3vh, 34px);
+  }
+
+  /* 矮屏：头像让出纵向空间 */
+  .ph-top {
+    grid-template-columns: 0.85fr 1fr auto;
+  }
+
+  .ph-photo {
+    aspect-ratio: 3 / 2;
+  }
+
+  .pn-inner {
+    padding: 18px 22px 15px;
+  }
+}
+
+/* ── 减少动效 ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .grain::after,
+  .pn-scan,
+  .cursor-dot,
+  .cursor-ring {
+    display: none;
+  }
+
+  /* 小屏的 3D 跟随（倾斜 + 推近 + 视差）对晕动敏感的人是负担，
+     只留下边框/辉光的变化告诉他「这块可以点」。 */
+  .pane {
+    --tilt-x: 0deg !important;
+    --tilt-y: 0deg !important;
+    --px: 0 !important;
+    --py: 0 !important;
+  }
+
+  .pane:hover .pn-inner,
+  .pane:focus-visible .pn-inner {
+    --pop: 0px;
+    --pop-sc: 1;
+  }
+}
+
+/* ── 打印：只出内容，不出装饰 ────────────────────────────── */
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+    color: #000;
+  }
+
+  .orb-layer,
+  .grain,
+  .hud,
+  .panes,
+  .cursor-dot,
+  .cursor-ring,
+  .veil,
+  .sh-close {
+    display: none !important;
+  }
+
+  .sheet {
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    /* 打印时不要居中位移 —— 那会把内容推出纸面 */
+    transform: none;
+    padding: 0;
+    background: none;
+    animation: none;
+  }
+
+  .sh-body {
+    flex: 0 1 auto;
+    overflow: visible;
+  }
+}
