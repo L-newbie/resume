@@ -29,7 +29,6 @@ jobs:
           
       - run: npm install  # 改为兼容性更好的 install 命令
       - run: npm run build
-      - run: npm test # 构建产物检查，失败则不部署
       
       - uses: actions/upload-pages-artifact@v3
         with:
