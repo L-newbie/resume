@@ -17,28 +17,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-    build:
+  build:
     runs-on: ubuntu-latest
-    # 👇 设置默认在 resume 目录下执行后续所有 run 命令
-    defaults:
-      run:
-        working-directory: ./resume
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          # 👇 显式指定子目录下的 lock 文件用于缓存控制
-          cache-dependency-path: './resume/package-lock.json'
-      - run: npm ci
+          # 去掉了 cache 配置，避免因找不到 lock 文件而报错
+          
+      - run: npm install  # 改为兼容性更好的 install 命令
       - run: npm run build
       - run: npm test # 构建产物检查，失败则不部署
+      
       - uses: actions/upload-pages-artifact@v3
         with:
-          # 👇 确保打包产物的路径正确（如果在子目录下，一般是 resume/dist）
-          path: resume/dist
-
+          path: dist
 
   deploy:
     needs: build
