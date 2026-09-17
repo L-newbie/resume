@@ -174,11 +174,11 @@ export const METRICS: { value: string; label: L; detail: L }[] = [
     },
   },
   {
-    value: '5',
+    value: '4',
     label: { zh: '段闭环链路', en: 'End-to-end loops built' },
     detail: {
-      zh: '数据挖掘、标签体系、badcase 自动仿真、真值生产、数据打包 —— 每一段都独立能跑，串起来就是一条自动运转的动态感知数据闭环。',
-      en: 'Mining, tagging, automated bad-case simulation, ground truth, packaging — each runs on its own; chained together they form a self-running dynamic-perception data loop.',
+      zh: '数据挖掘、标签体系、真值生产、数据打包 —— 每一段都独立能跑，串起来就是一条自动运转的动态感知数据闭环。',
+      en: 'Mining, tagging, ground truth, packaging — each runs on its own; chained together they form a self-running dynamic-perception data loop.',
     },
   },
   {
@@ -195,33 +195,6 @@ export const METRICS: { value: string; label: L; detail: L }[] = [
 
 export const TIMELINE: TimelineEntry[] = [
   {
-    period: { zh: '2026.03 — 至今', en: 'Mar 2026 — Present' },
-    org: { zh: '独立开发 · 基攻宝', en: 'Independent · Ji-Gong-Bao' },
-    orgShort: { zh: '基攻宝', en: 'Ji-Gong-Bao' },
-    brief: { zh: '独立开发 · 全栈', en: 'Solo · Full-stack' },
-    role: { zh: 'AI 应用开发 · 全栈', en: 'AI Application Development · Full-stack' },
-    summary: {
-      zh: '以 AI 协作为核心工作方式，独立完成从产品设计到运维的完整交付链路，验证「一人全栈」在真实复杂度下的可行性边界。',
-      en: 'Working with AI collaboration as the core method, delivering the full chain from product design through operations single-handedly — probing the feasibility boundary of one-person full-stack under real complexity.',
-    },
-    points: {
-      zh: [
-        '独立交付「基攻宝」基金实时估值系统 —— 约 4 万行 TypeScript，无后端架构，已上线并迭代至 v3.0，源码与在线体验公开',
-        '建立 19 个功能域的自动化回归网并接入 pre-commit 钩子，在无同行评审的条件下构造出可信的质量兜底，这也是敢于持续重构的前提',
-        '攻克金融计算的耦合难题：T+N 申赎确认、跨日结算、分红再投、净值重校准存在计算顺序依赖，以显式状态机替代隐式条件分支实现',
-        '将方法沉淀为可复用的 Agent Skill，把「AI 怎么用」从个人经验转为他人可直接调用的工程资产',
-      ],
-      en: [
-        'Independently delivered Ji-Gong-Bao, a real-time fund valuation system — ~40K lines of TypeScript, backend-free, live and iterated through v3.0, with source and demo public',
-        'Established an automated regression net across 19 functional domains wired into a pre-commit hook, constructing a trustworthy quality backstop absent peer review — the precondition for continuous refactoring',
-        'Solved the coupling problem in financial computation: T+N confirmation, cross-day settlement, dividend reinvestment and NAV recalibration carry ordering dependencies, implemented as an explicit state machine rather than implicit branching',
-        'Codified the method into reusable Agent Skills, converting "how to work with AI" from personal experience into an engineering asset others can invoke directly',
-      ],
-    },
-    stack: ['Vue 3', 'TypeScript', 'Vite', 'Pinia', 'ECharts', 'Vitest', 'PWA'],
-    current: true,
-  },
-  {
     // ⚠️ 在职中。曾经写成 2021.11 — 2024.10（已离职），和简历对不上。
     period: { zh: '2021.11 — 至今', en: 'Nov 2021 — Present' },
     org: { zh: '北京地平线机器人技术研发有限公司', en: 'Horizon Robotics' },
@@ -229,28 +202,26 @@ export const TIMELINE: TimelineEntry[] = [
     brief: { zh: '数据开发 · 动态感知', en: 'Data Eng · Perception' },
     role: { zh: '数据开发工程师 · 动态感知数据闭环', en: 'Data Engineer · Dynamic-Perception Data Loop' },
     summary: {
-      zh: '主导自动驾驶动态感知的数据基础设施建设，将挖掘、标注、真值、打包四个割裂环节重构为自运转流水线，使数据供给从人力排期解耦为按需配置。',
-      en: 'Led data-infrastructure construction for dynamic perception in autonomous driving, restructuring four siloed stages — mining, labeling, ground truth, packaging — into a self-running pipeline that decoupled data supply from headcount scheduling.',
+      zh: '主导自动驾驶动态感知的数据基础设施建设，覆盖标签体系、场景检索与训练前数据打包，将割裂环节重构为自运转流水线，使数据供给从人力排期解耦为按需配置。',
+      en: 'Led data-infrastructure construction for dynamic perception in autonomous driving — covering the tag system, scenario retrieval and pre-training data packaging — restructuring siloed stages into a self-running pipeline that decoupled data supply from headcount scheduling.',
     },
     points: {
       zh: [
-        '场景标签体系 —— 参与设计动静态障碍物场景库标签树，将「何种路况构成同一类场景」标准化为可执行规范；开发并维护自动 tagger，统筹保障标签跨专题、跨批次的一致性',
-        '时序数据挖掘 —— 解析仿真结果的结构化 msg，构建时序模块与 filter 模型，将离散帧级消息聚合为具明确起止边界的 timeline 事件，使动态行为成为可检索的一等对象',
-        'Badcase 自动仿真 —— 为误检漏检制定可复现的检测规则并开发自动仿真模块，产出 web 分析大屏，将归因周期从人工排查压缩为一次看板浏览',
+        '场景标签体系 —— 参与设计动静态障碍物场景库标签树, 设计filter规则，开发并维护自动 tagger 代码，通过定期质检统筹保障标签跨专题、跨批次的一致性',
         '长尾专题攻坚 —— 主导小动物检测专题，设计三级漏斗（规则粗筛 → 大模型语义精提 → 规则化人审），以递进式成本分配替代全量标注，方法论此后被复用于其他专题',
-        '全链路打通 —— 四个环节接入同一流水线，新专题接入由重写代码降级为修改配置',
-        '大模型进链路 —— 锥桶专题以 DAG 编排数据链路，接入 Qwen-VL、SAM3、YOLOv8 等开源模型做匹配与验证，配合车端结果反向验证与人工过滤，稳定支撑每个计划周期 10w+ 的数据需求',
+        '训练数据生产 —— 负责训练前的数据生产环节，将挖掘、标注、真值环节的产出整合为标准格式训练集，支撑模型迭代的数据供给',
+        '全链路打通 —— 多个环节接入同一流水线，新专题接入由重写代码降级为修改配置',
+        '大模型进链路 —— 专题项目以 DAG 编排数据链路，接入 Qwen-VL、SAM3、YOLOv8 等开源模型做匹配与验证，稳定支撑每个训练与发版周期内的数据需求',
       ],
       en: [
-        'Scenario tag system — co-designed the tag tree for static and dynamic obstacles, formalizing what constitutes one class of road situation into an executable specification; built and maintained the auto-tagger, ensuring label consistency across topics and batches',
-        'Time-series mining — parsed structured messages from simulation output and built the time-series module and filter model, aggregating frame-level messages into bounded timeline events and making dynamic behavior a first-class retrievable object',
-        'Automated bad-case simulation — defined reproducible detection rules for false positives and negatives and built the simulation module, delivering a web analytics dashboard that compressed attribution from manual investigation to a single dashboard read',
+        'Scenario tag system — co-designed the tag tree for static and dynamic obstacles, formalizing what constitutes one class of road situation into an executable specification; designed filter rules, developed and maintained the auto-tagger code, and safeguarded cross-topic, cross-batch consistency through periodic quality inspection',
         'Long-tail program — led the small-animal detection program, designing a three-stage funnel (rule-based coarse filtering → LLM semantic extraction → rule-governed human review), replacing exhaustive annotation with progressive cost allocation; the methodology was reused across later programs',
-        'Full-chain integration — four stages joined into one pipeline, with new-topic onboarding downgraded from rewriting code to editing configuration',
+        'Training-data production — owned the pre-training data-production stage, consolidating outputs of the mining, labeling and ground-truth stages into standard-format training sets to support model iteration',
+        'Full-chain integration — multiple stages joined into one pipeline, with new-topic onboarding downgraded from rewriting code to editing configuration',
         'Foundation models in the loop — the traffic-cone program orchestrates its pipeline as a DAG, wiring in Qwen-VL, SAM3 and YOLOv8 for matching and verification, paired with reverse validation against on-vehicle model output and human filtering, sustaining 10w+ items per planning cycle',
       ],
     },
-    stack: ['Python', 'SQL', 'MySQL', 'YOLO', 'Qwen-VL', 'DAG', 'OpenCV', { zh: '仿真系统', en: 'Simulation' }, 'Linux'],
+    stack: ['Python', 'SQL', 'MySQL', 'YOLO', 'Qwen-VL', 'DAG', 'OpenCV', 'Linux'],
     current: true,
   },
   {
@@ -303,7 +274,7 @@ export const PROJECTS: Project[] = [
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '一起以网络赌博为外壳的跨境电信诈骗案。资金自受害人充值入口进入后，经多层线上转账与线下取现反复拆分，最终流向境外。原始材料是数十张字段口径互不一致的 Excel 与 SQL 表，账户、自然人、企业、交易流水彼此交织。此类案件的常规做法——将全部关联直接投射为关系图——只会得到一张无法解读的稠密网络：侦查需要的不是拓扑图，而是若干个可立即核查的具体账户。',
+          zh: '一起以网络赌博为外壳的跨境电信诈骗案。资金经受害人充值进入后，由多层线上转账与线下取现反复拆分，最终流向境外。原始材料为数十张字段口径互不一致的 Excel 与 SQL 表，账户、自然人、企业、交易流水相互交织。此类案件的常规做法——将全部关联投射为关系图——只能得到一张无法解读的稠密网络；侦查需要的是若干可立即核查的具体账户，而非拓扑图。',
           en: 'A cross-border telecom-fraud case operating under the cover of online gambling. Funds entered through victim deposits, then were split repeatedly across layered online transfers and offline cash withdrawals before leaving the country. The source material comprised dozens of Excel and SQL tables with mutually inconsistent field semantics, interleaving accounts, individuals, corporate entities and transaction records. The conventional approach — projecting every relation into a graph — yields only an unreadable dense network. What an investigation requires is not a topology, but a small set of immediately verifiable accounts.',
         },
       },
@@ -312,10 +283,11 @@ export const PROJECTS: Project[] = [
         label: { zh: '方法', en: 'Approach' },
         points: {
           zh: [
-            '异构数据治理 —— 对数十张来源各异的表执行系统性清洗：缺失值与异常值识别修正、重复记录消解、字段口径与格式统一，完成实体对齐后整合入库，使原本无法联合查询的数据具备统一检索能力',
-            '关系分级加权建模 —— 全案的关键决策在于拒绝等权处理所有关联。以交易金额、交易频次、关系传递层级三个维度对边施加分级权重，使主干资金链在图上自然凸显，而非被数量级更大的低价值关联淹没。这一步直接决定了分析结果的可读性',
-            '公开数据补全 —— 自研爬虫系统采集企业征信平台的法定代表人、股东结构与关联企业信息，将原始数据中孤立的企业节点与真实自然人建立连接，拓展出仅凭内部数据无法观察到的关联路径',
-            '资金路径追踪 —— 沿加权后的主干链路逐层回溯拆分节点，识别通道账户与终端归集账户，形成带置信排序的重点账户清单',
+            '异构账表治理 —— 数十张表分属赌资流水、银行明细、第三方支付记录等不同来源，同一含义在不同表中的字段名与格式互不一致，同一人在不同表中的证件号写法也并不统一。逐表梳理字段语义并建立映射字典，修正缺失与异常值、消解重复记录后整合入 MySQL，首次使全部数据源支持联合检索',
+            '实体对齐与关系建图 —— 以账户、自然人、企业三类实体为核心节点，依据证件号、手机号、设备信息与交易对手构建实体间的关联边，将案件还原为一张可计算的关系网络，为后续量化分析提供底座',
+            '关系分级加权 —— 全案的关键决策：图上低价值关联的数量远大于资金主干，等权处理会使主干被淹没。以交易金额、交易频次、关系传递层级三个维度对边施加分级权重，主干资金链由此自然凸显。分析结果的可读性由这一步直接决定',
+            '公开数据补全 —— 自研爬虫采集企业征信平台的法定代表人、股东结构与关联企业信息，将账表中孤立的企业节点与真实自然人建立连接，拓展出仅凭案件内部数据不可见的关联路径',
+            '资金路径追踪 —— 沿加权后的主干链路逐层回溯拆分节点：区分过账通道账户与终端归集账户、识别取现环节的卡农线索，最终输出按置信度排序的重点账户清单',
           ],
           en: [
             'Heterogeneous data governance — systematic cleaning across dozens of disparate tables: detection and correction of missing and outlier values, duplicate resolution, unification of field semantics and formats, followed by entity alignment and consolidation into a single store, giving previously incompatible sources unified queryability',
@@ -333,7 +305,7 @@ export const PROJECTS: Project[] = [
           { value: '3', label: { zh: '维度关系加权模型', en: 'Dimensions in the weighting model' } },
         ],
         body: {
-          zh: '重点账户清单交付刑侦大队后逐一核实持有人情况，协助勘破该案。这段经历确立了我此后所有数据工作的交付标准：分析的终点是一个他人可独立核实的结论，而非一张视觉精美的关系图或一组漂亮的中间指标。该标准在后续自动驾驶评测归因中同样成立——指标退化必须能指向具体数据切片，才具备工程价值。',
+          zh: '重点账户清单交付刑侦大队后逐一核实，协助勘破该案。该案确立了我此后数据工作的交付标准：分析的终点是一个可被独立核实的结论——不是一张精美的关系图，也不是一组好听的中间指标；结论只有落到能逐一核查的具体账户上，对侦查才是可用的。',
           en: 'The priority account list was handed to the investigation unit and verified holder by holder, contributing to the resolution of the case. This engagement established the delivery standard I have applied to all subsequent data work: an analysis terminates in a conclusion another party can independently verify — not a visually accomplished graph, nor a flattering intermediate metric. The same standard later held in autonomous-driving evaluation attribution, where a regression must resolve to a specific data slice before it carries engineering value.',
         },
       },
@@ -351,63 +323,85 @@ export const PROJECTS: Project[] = [
     orgShort: { zh: '地平线机器人', en: 'Horizon Robotics' },
     kind: 'internal',
     tagline: {
-      zh: '将挖掘、标注、真值、打包四个割裂环节重构为自运转流水线，把数据供给从人力排期解耦为按需配置',
-      en: 'Restructuring four siloed stages into a self-running pipeline — decoupling data supply from headcount scheduling',
+      zh: '一套可复用的数据基础工具建设：标签与检索、数据挖掘、数据标注、数据打包，串联为从原始数据到训练集的完整供给链路',
+      en: 'A reusable data-infrastructure toolchain — tags and retrieval, data mining, annotation and packaging — chained into a complete supply line from raw data to training sets',
     },
     sections: [
       {
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '感知模型的迭代速度，其上界由数据供给速度决定而非算法本身。彼时的实际状况是：badcase 依赖算法工程师逐个手工收集；检索特定场景需人工遍历仿真日志；真值生产按专题各自为政、缺乏统一规范；评测指标出现退化时，无法归因至具体数据切片。链路的每一处断点都会形成工作堆积，而每一次堆积在结果上等价于模型少完成一轮迭代。问题的本质不在任何单个环节的效率，而在于整条链路缺乏自动流转能力。',
-          en: 'The iteration speed of a perception model is bounded by data supply, not by the algorithm itself. The situation at the time: bad cases were collected by hand, one engineer at a time; retrieving a specific scenario meant manually traversing simulation logs; ground-truth production was siloed per topic without unified specification; and when evaluation metrics regressed, the cause could not be attributed to any particular data slice. Every break in the chain formed a backlog, and each backlog was equivalent in outcome to one fewer model iteration. The problem was never the efficiency of any single stage — it was that the chain as a whole could not advance without being pushed.',
+          zh: '感知模型迭代的上界是数据供给速度，而非算法本身。彼时检索靠人工遍历日志、真值生产各自为政、各环节格式互不一致，链路每处断点都等价于模型少一轮迭代——问题不在单环节效率，而在缺乏可复用的基础设施。本项目即为此构建一套覆盖标签与检索、数据挖掘、数据标注、数据打包的基础工具链。',
+          en: 'The iteration speed of a perception model is bounded by data supply, not by the algorithm. Retrieval meant manual log traversal, ground-truth production was siloed, and formats diverged at every stage — each break in the chain equaled one fewer model iteration. The gap was reusable infrastructure, not per-stage efficiency. This project built that toolchain: tags and retrieval, data mining, annotation, and packaging.',
         },
       },
       {
         id: 'tagging',
-        label: { zh: '标签体系', en: 'Tag System' },
+        label: { zh: '标签与检索', en: 'Tags & Retrieval' },
         points: {
           zh: [
-            '参与设计动静态障碍物场景库标签树，将「何种路况构成同一类场景」这一判断标准化为可执行规范，为跨专题的数据检索建立统一语义基础',
-            '开发并长期维护自动 tagger，对各类标签的增量数据执行定期质检，统筹保障标签在不同专题、不同时间批次间的一致性与准确性',
-            '标签树落库后支撑 web 端多条件组合检索，使「找某类场景的数据」从人工遍历日志变为一次结构化查询',
+            '公司级标签树按来源分为项目标签、标签库、地理场景、采集标签、路测标签等若干子树，各来源标签统一挂载在时间线标签体系上、可跨来源组合检索；我负责其中动态障碍物场景库的标签树设计 —— 围绕目标类型、动静态属性、运动状态等维度，将「何种路况构成同一类场景」的判断标准化为层级化的可执行规范',
+            '负责开发并长期维护动态障碍物方向下的自动 tagger：基于路采数据回传信号中的结构化字段（工况、位姿、目标框等）实现标签的规则化批量推断与挂载，标签回写标签树数据库、与工况环境等其他来源标签形成关联',
+            '前端检索：用户通过 web 端组合标签条件、点选提供的按钮，或直接编写 SQL 完成数据获取；我主导为检索提供数据支撑并完成各类场景的检索测试 —— 高频组合与长尾边界组合逐类验证结果的准确性与召回边界，确保检索结果可被算法团队直接使用',
+            '对各类标签的增量数据执行定期质检（抽样复核、跨批次一致性比对），保障标签在不同专题、不同时间批次间的一致性与准确性',
           ],
           en: [
-            'Co-designed the scenario tag tree for static and dynamic obstacles, formalizing the judgment of what constitutes one class of road situation into an executable specification, establishing a unified semantic basis for cross-topic retrieval',
-            'Built and maintained the automatic tagger long-term, running periodic quality inspection on incremental tag data and ensuring label consistency and accuracy across topics and time batches',
-            'With the tag tree persisted, the web layer supports multi-condition composite retrieval — turning "find data for this scenario class" from manual log traversal into a single structured query',
+            'The company-level tag tree is organized by source into several subtrees — project tags, the tag library, GeoHub scene tags, collection tags and road-test tags — all mounted on one timeline-tag system and jointly queryable across sources; I owned the tag-tree design for the dynamic-obstacle scene library, formalizing "what constitutes one class of road situation" around target class, static/dynamic attribute and motion state into a hierarchical executable specification',
+            'Developed and maintained the auto-tagger for the dynamic-obstacle direction: rule-based batch label inference and attachment over structured fields in the road-collection telemetry (driving condition, pose, object boxes), with results written back into the tag-tree database and cross-linked with tags from other sources such as driving conditions',
+            'Front-end retrieval: users fetch data on the web by composing tag conditions via the provided buttons, or by writing SQL directly; I led data support for retrieval and its scenario-by-scenario testing — verifying accuracy and recall boundaries for high-frequency and long-tail condition combinations so results could be used directly by the algorithm team',
+            'Ran periodic quality inspection on incremental tag data (sampled re-review, cross-batch consistency comparison), ensuring label consistency and accuracy across topics and time batches',
           ],
         },
       },
       {
         id: 'mining',
-        label: { zh: '时序挖掘', en: 'Mining' },
+        label: { zh: '数据挖掘', en: 'Mining' },
         points: {
           zh: [
-            '基于仿真结果解析结构化 msg（时间戳、目标类型、速度、Track ID），构建时序模块与 filter 模型',
-            '将离散帧级消息按 Track 维度聚合为具备明确起止边界的 timeline 事件，使「某目标在某时段的完整行为」成为可检索的一等对象，而非散落的孤立帧',
-            '挖掘结果回写标签树数据库，与标签体系形成互补：标签负责静态场景归类，时序事件负责动态行为刻画，二者联合支撑 web 端条件检索与可视化',
+            '开发数据挖掘链路：以检测模型对路采数据执行批量推理，按工况、目标类型、置信度阈值等条件组合筛选候选场景，命中结果沉淀为可检索的结构化数据，链路化而非一次性脚本产出',
+            '引入多模态模型补充语义级挖掘：检测模型只认「框得住的目标」，多模态模型能理解「什么场合下出现的什么目标」，两者互补显著扩展可挖掘场景的覆盖面',
+            '挖掘执行依托云端集群批量调度，按数据批次组织推理任务，支持断点续跑与结果增量合并，保障大规模路采数据下挖掘吞吐',
+            '挖掘结果在链路中携带工况、目标类型等属性信息，随数据一并进入下游标注与打包环节，支撑后续按场景筛选与统计，不依赖平台级的自动联动机制',
           ],
           en: [
-            'Parsed structured messages from simulation output (timestamp, object class, velocity, track ID) and built the time-series module and filter model',
-            'Aggregated discrete frame-level messages along the track dimension into timeline events with explicit start and end boundaries, making "the complete behavior of one object over an interval" a first-class retrievable object rather than scattered isolated frames',
-            'Mining results were written back into the tag database, complementing the tag system: tags classify static scenarios, timeline events characterize dynamic behavior, and together they support web-side retrieval and visualization',
+            'Developed the mining pipeline: detection models ran batch inference over road-collection data, candidate scenarios were filtered by composed conditions — driving condition, target class, confidence thresholds — and hits were consolidated into retrievable structured data, as a pipeline rather than one-off scripts',
+            'Introduced multimodal models to supplement semantic-level mining: a detector only recognizes what it can box; a multimodal model understands what target appears in what situation. The two are complementary and together extend minable scenario coverage substantially',
+            'Mining ran on cloud-cluster batch scheduling, with inference tasks organized per data batch, supporting checkpoint resume and incremental result merging to sustain throughput over bulk road-collection data',
+            'Mining output carries its attributes — driving condition, target class and the like — through the pipeline into downstream annotation and packaging, supporting later scenario-level filtering and statistics, without depending on any platform-level automatic linkage',
           ],
         },
       },
       {
-        id: 'badcase',
-        label: { zh: '仿真归因', en: 'Simulation' },
+        id: 'annotation',
+        label: { zh: '数据标注', en: 'Annotation' },
         points: {
           zh: [
-            '针对误检与漏检分别制定可复现的仿真检测规则，将「这算不算一个 badcase」从主观判断转为规则判定',
-            '开发自动仿真模块：任务启动后自动遍历当前专题下全部 badcase，无需人工干预',
-            '产出 web 端分析大屏，算法团队次日即可直接观察各类 case 的改善与退化分布，将归因周期从人工排查压缩至一次看板浏览',
+            '数据筛选 —— 两级执行：自动粗筛以模型置信度、目标密度、场景覆盖等指标对候选数据分级，将明显低价值数据前置过滤；粗筛结果再由人工执行二次精筛，确定最终入标范围，避免标注预算平均摊派',
+            '预标注 —— 以检测模型推理结果作为标注初稿，人工在其上执行校正而非从零绘制，降低单帧标注成本；预标注质量与人工校正量按批次统计，反向用于调整预标注模型与阈值',
+            '人工标注 —— 制定标注规则文档统一判定口径（目标类型边界、遮挡截断处理、歧义场景裁决等），标注完成后执行质检与抽检，保障真值质量可核查',
           ],
           en: [
-            'Defined reproducible simulation detection rules for false positives and false negatives separately, converting "does this qualify as a bad case" from subjective judgment into rule-based determination',
-            'Built the automated simulation module: on job start it traverses every bad case under the current topic without manual intervention',
-            'Delivered a web analytics dashboard so the algorithm team could observe the improvement and regression distribution across case classes the following morning, compressing attribution from manual investigation to a single dashboard read',
+            'Data triage — two-level execution: automatic coarse filtering graded candidates by model confidence, target density and scenario coverage, filtering out clearly low-value data up front; the coarse-filtered result then went through a manual fine-screening that fixed the final annotation scope, keeping the budget from being spread evenly',
+            'Pre-labeling — detection-model inference output served as the annotation draft, with humans correcting rather than drawing from scratch, cutting per-frame cost; pre-label quality and human-correction volume were tracked per batch and fed back into pre-label model and threshold tuning',
+            'Human labeling — a written rule document unified adjudication criteria (target-type boundaries, occlusion and truncation handling, ambiguous-scenario rulings); quality inspection and spot checks followed labeling to keep ground truth auditable',
+          ],
+        },
+      },
+      {
+        id: 'packaging',
+        label: { zh: '数据打包', en: 'Packaging' },
+        points: {
+          zh: [
+            '将标注产出的真值结果打包为 LMDB 格式的训练集，内容包括标注结果、数据索引、图像数据、位置信息等，符合模型训练的输入结构',
+            '打包流程工程化：以数据批次为单位组织打包任务，支持增量打包与版本化管理，历史训练集可复现、可回溯到具体批次与切片',
+            '打包遵循既定的通用规则，在此之上按专题定制内容（样本组织方式、数据范围、版本标识等），定制不侵入通用流程，新专题打包仅调整配置',
+            '打包过程内建数据验证：完整性校验（样本数与真值记录一一对应）、格式校验（训练框架可直接解析）、统计核对（类别分布符合预期），异常批次在进入训练前即被拦截',
+          ],
+          en: [
+            'Packaged annotation outputs — the ground-truth results — into LMDB-format training sets containing the annotation results themselves, data indices, image data, location information and the rest, matching the model-training input structure',
+            'Packaging was engineered as a workflow: tasks organized per data batch, with incremental packaging and versioning, so historical training sets remain reproducible and traceable to specific batches and slices',
+            'Packaging follows established generic rules, on top of which per-topic customization is applied (sample organization, data scope, version identifiers and the like); customization never intrudes on the generic flow, so a new topic only requires configuration changes',
+            'Data verification is built into packaging: integrity checks (sample count matching ground-truth records one-to-one), format checks (directly parseable by the training framework), and statistical reconciliation (class distribution as expected) — defective batches are intercepted before they reach training',
           ],
         },
       },
@@ -415,16 +409,16 @@ export const PROJECTS: Project[] = [
         id: 'outcome',
         label: { zh: '成果', en: 'Outcome' },
         metrics: [
-          { value: '4', label: { zh: '环节接入同一流水线', en: 'Stages joined into one pipeline' } },
+          { value: 'LMDB', label: { zh: '训练集统一出口格式', en: 'One output format into training' } },
           { value: '配置化', label: { zh: '新专题接入方式', en: 'New-topic onboarding' } },
         ],
         body: {
-          zh: '挖掘、标注、真值生产、数据打包四个原本割裂的环节被整合为一条可自动运转的流水线，新专题接入由重写代码降级为修改配置。这套闭环将数据供给模式从「按人力排期」转变为「按需求配置」。对我个人而言，它是我真正理解「数据基础设施」这一概念的地方——杠杆从来不在某个精巧的脚本，而在于让整条链路不再需要人推动。',
-          en: 'Mining, labeling, ground-truth production and dataset packaging — four previously siloed stages — were integrated into a self-running pipeline, with new-topic onboarding downgraded from rewriting code to editing configuration. The loop shifted data supply from headcount-scheduled to demand-configured. Personally, it is where I came to understand what data infrastructure actually means: the leverage never resides in one clever script, but in making the entire chain advance without anyone pushing it.',
+          zh: '四环节整合为一条可复用的工具链，数据供给从「按人力排期」转为「按需求配置」，新专题打包仅需调整配置。其价值不在单点工具，而在各环节以统一规范衔接后的整链路可复用性。',
+          en: 'The four stages were integrated into one reusable toolchain: data supply shifted from headcount-scheduled to demand-configured, and packaging a new topic requires only configuration edits. The value resides not in any single tool but in the reusability of the whole chain once every stage speaks the same specification.',
         },
       },
     ],
-    stack: ['Python', 'SQL', 'MySQL', { zh: '仿真系统', en: 'Simulation' }, { zh: '标签树', en: 'Tag Tree' }, { zh: '时序建模', en: 'Time-Series Modeling' }],
+    stack: ['Python', 'SQL', 'MySQL', { zh: '标签树', en: 'Tag Tree' }, { zh: '数据挖掘', en: 'Data Mining' }, { zh: '数据标注', en: 'Annotation' }, { zh: 'LMDB', en: 'LMDB' }, 'Linux'],
     featured: true,
   },
   {
@@ -437,35 +431,35 @@ export const PROJECTS: Project[] = [
     orgShort: { zh: '地平线机器人', en: 'Horizon Robotics' },
     kind: 'internal',
     tagline: {
-      zh: '以三级漏斗解构长尾稀疏样本挖掘，用递进式成本分配替代全量标注',
-      en: 'Deconstructing long-tail sparse-sample mining into a three-stage funnel — progressive cost allocation in place of exhaustive annotation',
+      zh: '面向安全长尾类别的数据攻坚：以三级漏斗从海量路采数据中富集稀疏样本，交付可训练的正样本数据集',
+      en: 'A data campaign for a safety-critical long-tail class: enriching sparse samples out of bulk road-collection data through a three-stage funnel into a trainable positive-sample set',
     },
     sections: [
       {
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '自动驾驶的感知对象不止于车辆与行人。猫狗一类小动物在路面出现频率极低，但一旦发生漏检导致碾压、或误检触发幽灵刹车，其安全后果与舆论代价均极为严重。难点恰恰源自「低频」这一属性本身：在海量路采数据中，此类目标是标准的稀疏信号——全量送标成本不可接受，随机抽样又几乎无法命中正样本。这是典型的长尾数据问题，其解法不在模型侧，而在数据侧。',
-          en: 'Perception in autonomous driving extends beyond vehicles and pedestrians. Small animals such as cats and dogs appear on roadways at very low frequency, yet a miss resulting in collision, or a false positive triggering phantom braking, carries severe safety and reputational cost. The difficulty derives precisely from that rarity: within bulk road-collection data these are sparse signals — exhaustive annotation is economically infeasible, while random sampling almost never returns a positive. This is a textbook long-tail data problem, and its solution resides on the data side rather than the model side.',
+          zh: '自动驾驶的感知对象不止于车辆与行人。猫狗一类小动物在路面出现频率极低，但一旦漏检导致碾压、或误检触发幽灵刹车，安全后果与舆论代价均极严重，属于典型的「安全相关但样本极稀」的长尾类别。难点源自「低频」本身：在全量路采数据中此类目标是稀疏信号——全量送标成本不可接受，随机抽样几乎无法命中正样本。解法不在模型侧，而在数据侧：如何在成本约束下把稀疏正样本从海量数据中富集出来。',
+          en: 'Perception in autonomous driving extends beyond vehicles and pedestrians. Small animals such as cats and dogs appear on roadways at very low frequency, yet a miss resulting in collision, or a false positive triggering phantom braking, carries severe safety and reputational cost — a safety-critical yet data-starved long-tail class. The difficulty derives from that rarity itself: within bulk road-collection data these are sparse signals; exhaustive annotation is economically infeasible, and random sampling almost never returns a positive. The solution resides on the data side: enriching sparse positives out of massive data under a cost constraint.',
         },
       },
       {
         id: 'funnel',
         label: { zh: '三级漏斗', en: 'Funnel' },
         body: {
-          zh: '漏斗的设计原则是递进式成本分配：每一级都以更昂贵但更精准的手段，处理数量级更小的数据。',
-          en: 'The funnel is designed around progressive cost allocation: each stage applies a more expensive but more precise method to an order-of-magnitude smaller volume.',
+          zh: '漏斗的设计原则是递进式成本分配：每级的单位成本递增、精度递增，处理量递减一个数量级——让最贵的手段只作用于最小的数据量。',
+          en: 'The funnel is designed around progressive cost allocation: unit cost and precision rise stage by stage while volume drops an order of magnitude each time — the most expensive method touches only the smallest volume.',
         },
         points: {
           zh: [
-            '一级 · 规则粗筛 —— 联合内部工况标签、时间窗口，以及猫狗实际高发区域（住宅区周边、城市道路夜间时段等）先验分布进行筛选，将候选集从全量压缩至可处理量级。成本最低，负责削减数量级',
-            '二级 · 模型精提 —— 引入开源大模型执行语义级理解，从粗筛结果中提取真正可能包含目标的帧。单帧成本高于规则筛选，但作用于已缩小的候选集，总成本可控',
-            '三级 · 规则化人审 —— 制定明确的判定规则文档后由人工执行终审，产出高纯度数据集。单位成本最高，但处理量已降至最小',
+            '一级 · 规则粗筛 —— 以先验知识压缩数量级：联合内部工况标签（时间窗口、路段类型）、猫狗高发场景的先验分布（住宅区周边、城市道路夜间时段）过滤全量数据，候选集从 PB 级路采压缩至可处理量级。成本趋近于零，代价是召回有限——先验之外的出现场景会在这一级漏掉，需在后续迭代中补充先验',
+            '二级 · 模型精提 —— 以语义理解提高命中密度：引入开源大模型对粗筛候选执行语义级判断，从「时间地点上像」推进到「画面内容上像」，保留真正可能包含目标的帧并给出置信度。单帧成本显著高于规则筛选，但作用于已压缩的候选集，总成本可控',
+            '三级 · 规则化人审 —— 以人工判定锁定最终真值：制定明确的判定规则文档（目标可见性、遮挡比例、最小尺寸下限等）后执行人工终审，产出高纯度数据集。单位成本最高，但处理量已被前两级压至最小',
           ],
           en: [
-            'Stage one · rule-based coarse filtering — combining internal condition tags, time windows, and the prior distribution of where animals actually appear (residential perimeters, urban roads at night), compressing the candidate pool to a tractable magnitude. Lowest cost, responsible for removing orders of magnitude',
-            'Stage two · model-based extraction — an open-source large model performs semantic-level understanding to extract frames plausibly containing targets. Per-frame cost exceeds rule filtering, but it operates on an already-reduced pool, keeping total cost bounded',
-            'Stage three · rule-governed human review — explicit written adjudication rules followed by human final review, yielding a high-purity dataset. Highest unit cost, applied to the smallest volume',
+            'Stage one · rule-based coarse filtering — compressing orders of magnitude on priors: internal condition tags (time windows, road-segment type) combined with priors on where animals actually appear (residential perimeters, urban roads at night) filtered the full corpus down to a tractable pool. Cost near zero, at the price of bounded recall — scenes outside the priors drop out here, and the priors get patched in later iterations',
+            'Stage two · model-based extraction — raising hit density through semantic understanding: an open-source large model judged the coarse-filtered candidates semantically, advancing from "the time and place look right" to "the content looks right", keeping plausible frames with confidence scores. Per-frame cost far exceeds rule filtering, but it operates on the compressed pool, keeping total cost bounded',
+            'Stage three · rule-governed human review — locking final ground truth by human judgment: an explicit written adjudication document (target visibility, occlusion ratio, minimum size threshold) preceded human final review, yielding a high-purity dataset. Highest unit cost, applied to the smallest volume',
           ],
         },
       },
@@ -474,15 +468,17 @@ export const PROJECTS: Project[] = [
         label: { zh: '数据运营', en: 'Operations' },
         points: {
           zh: [
-            '标注规范治理 —— 修订标注规则文档，明确界定小动物在遮挡、模糊、远距离小目标等边界情形下的标注判据，消除标注员的主观裁量空间',
-            '质量闭环 —— 协调标注资源排期并全程监控标注质量，确保回流数据可直接使用，而非产生大规模返工',
-            '需求池建设 —— 生成标准格式训练数据与汇总文档，建立覆盖不同时间跨度与规模的数据需求池，使后续迭代可按需取数而无须从头重新挖掘',
+            '漏斗阈值迭代 —— 精提模型对不同类别目标的判分可靠度不同：按筛选反馈统计各误检、漏检类别的实际情况，针对性调整各类别的置信度阈值，而非全局一刀切',
+            '标注规范治理 —— 修订标注规则文档，明确小动物在遮挡、模糊、远距离小目标等边界情形下的标注判据，压缩标注员的主观裁量空间',
+            '质量闭环 —— 协调标注资源排期并全程监控标注质量，回流数据可直接进入训练而非大规模返工',
+            '需求池建设 —— 产出标准格式训练数据与汇总文档，沉淀覆盖不同时间跨度与场景类型的数据需求池，后续迭代按需取数，无须从头重新挖掘',
             '训练与发版支撑 —— 以新数据迭代模型，同步完善评测数据集与评测规则，修订发版文档，为模型上线提供完整的数据侧依据',
           ],
           en: [
-            'Annotation specification governance — revised the labeling guidelines to define explicit criteria for boundary cases involving occlusion, blur, and distant small targets, eliminating annotator discretion',
-            'Quality loop — coordinated annotator scheduling and monitored quality throughout, ensuring returned data was directly usable rather than generating large-scale rework',
-            'Requirement pool — produced standard-format training data and summary documentation, and established a requirement pool spanning time ranges and scales so later iterations could draw on demand instead of re-mining from scratch',
+            'Funnel threshold iteration — the extraction model scores different target classes with unequal reliability: per-class error and miss patterns from filtering feedback drove targeted confidence-threshold adjustments per class, rather than one global cutoff',
+            'Annotation specification governance — revised the labeling guidelines to define explicit criteria for boundary cases involving occlusion, blur and distant small targets, compressing annotator discretion',
+            'Quality loop — coordinated annotator scheduling and monitored quality throughout, ensuring returned data entered training directly rather than generating large-scale rework',
+            'Requirement pool — produced standard-format training data and summary documentation, and established a requirement pool spanning time ranges and scene types, so later iterations drew on demand instead of re-mining from scratch',
             'Training and release support — iterated the model on new data, refined the evaluation set and its rules in step, and revised release documentation to provide a complete data-side basis for launch',
           ],
         },
@@ -491,12 +487,12 @@ export const PROJECTS: Project[] = [
         id: 'outcome',
         label: { zh: '成果', en: 'Outcome' },
         metrics: [
-          { value: '3', label: { zh: '级漏斗结构', en: 'Funnel stages' } },
-          { value: '可复用', label: { zh: '方法论已迁移至其他专题', en: 'Methodology reused across topics' } },
+          { value: '', label: { zh: '三级递进式漏斗', en: 'Progressive funnel stages' } },
+          { value: '', label: { zh: '可复用，方法论已迁移至其他专题', en: 'Methodology reused across topics' } },
         ],
         body: {
-          zh: '该专题的核心产出并非某一批数据，而是一套被固化下来的长尾问题方法论：稀疏目标的关键不在于标注更多，而在于筛选更准——通过递进式成本分配，让昂贵手段只作用于高价值候选。「粗筛 → 模型精提 → 规则人审」这一结构此后在多个专题中被直接复用，成为团队处理低频类别的标准范式。',
-          en: 'The principal output was not a particular dataset but a codified methodology for long-tail problems: the answer to a sparse class is not labeling more, it is filtering better — progressive cost allocation confines expensive methods to high-value candidates. The coarse-filter → model-extract → rule-based-review structure was subsequently reused directly across multiple programs, becoming the team standard for handling low-frequency categories.',
+          zh: '专题交付了可直接训练的正样本数据集，支撑小动物检测能力的迭代上线；更重要的产出是一套固化的长尾方法论：稀疏目标的关键不在标注更多，而在筛选更准——递进式成本分配让昂贵手段只作用于高价值候选。「粗筛 → 模型精提 → 规则人审」的结构此后在多个专题中被直接复用，成为团队处理低频类别的标准范式。',
+          en: 'The program delivered a directly trainable positive-sample set that carried the small-animal detection capability into release; the more durable output is the codified methodology: the answer to a sparse class is not labeling more but filtering better — progressive cost allocation confines expensive methods to high-value candidates. The coarse-filter → model-extract → rule-based-review structure was reused directly across multiple programs, becoming the team standard for low-frequency categories.',
         },
       },
     ],
@@ -512,16 +508,16 @@ export const PROJECTS: Project[] = [
     orgShort: { zh: '地平线机器人', en: 'Horizon Robotics' },
     kind: 'internal',
     tagline: {
-      zh: '以 DAG 编排整条数据链路，把多个开源大模型接进挖掘环节做匹配与验证，覆盖各场景类型的锥桶数据',
-      en: 'Orchestrating the whole pipeline as a DAG and wiring several open-source foundation models into the mining stage for matching and verification, covering traffic cones across scene types',
+      zh: '把差异极大的多场景锥桶数据整合进一条链路：DAG 编排任务节点，多模型协同完成匹配与验证，一套挖掘结果支撑多个方向',
+      en: 'Bringing highly disparate cone scenes into one pipeline: task nodes orchestrated as a DAG, multi-model matching and verification, one mining result serving multiple directions',
     },
     sections: [
       {
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '锥桶是施工区域的核心语义：它标记的不是一个障碍物，而是「这条车道此刻不能走」。难点在于形态与场景的组合极多 —— 高速养护、城区占道、事故现场、临时管制，各自的锥桶排布、密度、背景完全不同，靠单一规则或单一模型都覆盖不全。数据侧要解决的问题是：如何让一条链路同时吃下这些差异极大的场景，并且能按需扩展。',
-          en: 'A traffic cone carries construction-zone semantics: it marks not an obstacle but the fact that this lane is closed right now. The difficulty is combinatorial — highway maintenance, urban lane occupation, accident scenes, temporary control each differ in cone layout, density and background, and no single rule or single model covers them all. The data-side question is how one pipeline can absorb such varied scenes and still extend on demand.',
+          zh: '锥桶承载的是施工区语义：它标记的不是一个障碍物，而是「这条车道此刻不能走」——属于漏检代价高、场景差异大的类别。难点在于组合爆炸：高速养护、城区占道、事故现场、临时管制，各自的锥桶排布、密度、光照与背景完全不同，单一规则或单一模型都覆盖不全。数据侧要回答的问题是：如何让一条链路同时消化差异极大的场景，并且能按需扩展。',
+          en: 'A traffic cone carries construction-zone semantics: it marks not an obstacle but the fact that this lane is closed right now — a high-miss-cost class with extreme scene variance. The difficulty is combinatorial: highway maintenance, urban lane occupation, accident scenes and temporary control each differ completely in cone layout, density, lighting and background, and no single rule or model covers them all. The data-side question: how one pipeline absorbs such disparate scenes and still extends on demand.',
         },
       },
       {
@@ -529,14 +525,16 @@ export const PROJECTS: Project[] = [
         label: { zh: '链路编排', en: 'Pipeline' },
         points: {
           zh: [
-            'DAG 数据链路 —— 把挖掘、匹配、验证、导出拆成可独立重跑的任务节点并以 DAG 串联，某一环失败只重跑该节点，不必从头再来',
-            '资源配置 —— 按节点的实际负载分配 CPU / GPU：规则筛选和 IO 密集的节点走 CPU，模型推理节点排 GPU，避免整条链路被最贵的那一段拖住',
-            '多下游适配 —— 同一份挖掘结果适配 2D、BEV、GOD 三个方向各自的输入格式要求，下游换方向不需要重新挖一遍',
+            'DAG 任务编排 —— 把挖掘、匹配、验证、导出拆成职责单一的任务节点，以 DAG 声明依赖关系后串联执行：节点间数据落盘、状态可查，某一环失败只重跑该节点，不必从头再来；这使长链路在大批量数据上的容错成本降到最低。节点按场景类型分组并行，不同场景的挖掘任务互不阻塞，整体吞吐不受最慢场景拖累',
+            '场景解耦 —— 各场景类型（高速养护、城区占道、事故现场、临时管制）各自维护独立的筛选条件与判定参数，一个场景的规则调整不影响其他场景的进行中任务，差异极大的场景得以在同一条链路上独立演进',
+            '资源配置 —— 按节点的实际负载特性分配算力：规则筛选与 IO 密集节点走 CPU，模型推理节点排 GPU 队列，避免整条链路被最贵的一段拖住，也避免 GPU 空转在非推理任务上',
+            '多格式导出 —— 同一份挖掘结果按各方向的输入格式要求分别导出，更换使用方向不触发重新挖掘，一次挖掘多处消费',
           ],
           en: [
-            'DAG pipeline — mining, matching, verification and export split into independently re-runnable task nodes chained as a DAG; a failed stage re-runs alone instead of restarting the whole chain',
-            'Resource allocation — CPU and GPU assigned by actual node load: rule filtering and IO-bound nodes on CPU, inference nodes queued on GPU, so the chain is not held hostage by its most expensive segment',
-            'Multi-consumer adaptation — one mining result adapted to the input formats required by the 2D, BEV and GOD directions, so a change of consumer does not mean re-mining',
+            'DAG task orchestration — mining, matching, verification and export split into single-responsibility task nodes, wired by declared dependencies: data lands on disk between nodes, state is inspectable, and a failed stage re-runs alone instead of restarting the whole chain — minimizing the fault-tolerance cost of a long pipeline over bulk data. Nodes run in parallel groups by scene type, so mining tasks of different scenes never block one another and overall throughput is not dragged by the slowest scene',
+            'Scene decoupling — each scene type (highway maintenance, urban lane occupation, accident scenes, temporary control) keeps its own filtering conditions and adjudication parameters; adjusting one scene’s rules never disturbs the in-flight tasks of another, allowing wildly different scenes to evolve independently on the same pipeline',
+            'Resource allocation — compute assigned by node characteristics: rule filtering and IO-bound nodes on CPU, inference nodes queued on GPU, so the chain is not held hostage by its most expensive segment and GPUs never idle on non-inference work',
+            'Multi-format export — one mining result exported separately to the input formats required by each direction; switching directions never triggers re-mining — one mining pass, multiple consumers',
           ],
         },
       },
@@ -545,14 +543,14 @@ export const PROJECTS: Project[] = [
         label: { zh: '模型接入', en: 'Models' },
         points: {
           zh: [
-            '多模型协同 —— 接入 Qwen-VL、SAM3、YOLOv8 等多个开源模型：视觉语言模型负责场景语义判断，分割与检测模型负责定位与计数，各取所长而不是指望一个模型全包',
-            '提示词工程与参数固化 —— 对提示词和模型参数逐项做对照测试，把稳定复现的组合沉淀成 config，使挖掘结果可复现、可交接，而不是依赖调参时的手感',
-            '反向验证 —— 用车端模型的输出反过来校验挖掘结果，再叠一层人工过滤，两道关卡卡住误召',
+            '多模型分工 —— 接入 Qwen-VL、SAM3、YOLOv8 等开源模型并按能力分层：视觉语言模型做场景级语义判断（是否施工区、排布类型、语义描述），检测模型做实例级定位与计数，分割模型补轮廓与掩膜精度',
+            '提示词工程与参数固化 —— 对提示词逐项做对照测试：同一场景以不同表述提问、比较判分稳定性，把稳定复现的提示词与参数组合沉淀为 config，使挖掘结果可复现、可交接，而不依赖调参时的手感；也使「换模型升级」变成改配置而非改代码',
+            '结果复核 —— 模型判定与规则条件联合打分，边界样本（置信度落在灰区的帧）单独归档，人工复核结论回填后作为后续阈值调整的依据',
           ],
           en: [
-            'Model ensemble — Qwen-VL, SAM3, YOLOv8 and others wired in together: the vision-language model judges scene semantics while segmentation and detection models handle localization and counting — each used for what it is good at rather than expecting one model to do everything',
-            'Prompt engineering and frozen parameters — prompts and model parameters tested item by item, with reproducible combinations codified into config so results are reproducible and transferable rather than dependent on tuning intuition',
-            'Reverse validation — on-vehicle model output used to check the mining result, with a human filtering pass on top: two gates against false recall',
+            'Model division of labor — Qwen-VL, SAM3, YOLOv8 and other open-source models wired in with layered roles: the vision-language model judges scene-level semantics (construction zone or not, layout type, semantic description), detection models handle instance-level localization and counting, segmentation models supply contour and mask precision',
+            'Prompt engineering and frozen parameters — prompts tested pairwise: the same scene queried with different phrasings, comparing score stability; reproducible prompt-parameter combinations are codified into config, making results reproducible and transferable rather than dependent on tuning intuition, and turning model upgrades into a configuration change instead of a code change',
+            'Result adjudication — model verdicts and rule conditions jointly scored, with boundary samples (frames whose confidence falls in the gray zone) archived separately; human-review conclusions are filled back in as the basis for later threshold adjustment',
           ],
         },
       },
@@ -560,12 +558,12 @@ export const PROJECTS: Project[] = [
         id: 'outcome',
         label: { zh: '成果', en: 'Outcome' },
         metrics: [
-          { value: '10w+', label: { zh: '每个计划周期的任务量', en: 'Items per planning cycle' } },
-          { value: '3', label: { zh: '个下游方向共用一条链路', en: 'Downstream directions on one pipeline' } },
+          { value: 'DAG', label: { zh: '链路编排方式', en: 'Pipeline orchestration' } },
+          { value: '多模型', label: { zh: '分工协同接入', en: 'Models in division of labor' } },
         ],
         body: {
-          zh: '链路跑通之后，每个计划周期基本都能满足 10w+ 的任务需求。更关键的是扩展方式变了：新增一类锥桶场景不再是写一套新脚本，而是加一个任务节点、补一段 config —— 前面几个专题沉淀下来的「配置化接入」在这里又验证了一次。',
-          en: 'Once the chain was running, each planning cycle met a 10w+ workload as a matter of course. The more consequential change was in how it extends: adding a new cone scenario is no longer a new script but one more task node and a config entry — the configuration-driven onboarding built up in earlier programs, validated once more.',
+          zh: '链路跑通后，多场景锥桶数据的供给进入稳定节奏。更关键的产出是扩展方式的变化：新增一类锥桶场景不再是写一套新脚本，而是加一个任务节点、补一段 config——多模型分工与 DAG 编排让链路在保持可验证性的前提下按需生长，此前专题沉淀的「配置化接入」在此再次得到验证。',
+          en: 'Once running, the chain supplied multi-scene cone data at a steady cadence. The more consequential output is how it extends: adding a new cone scenario is no longer a new script but one more task node and a config entry — the model division of labor and DAG orchestration let the pipeline grow on demand without sacrificing verifiability, validating once more the configuration-driven onboarding built up in earlier programs.',
         },
       },
     ],
@@ -592,67 +590,31 @@ export const PROJECTS: Project[] = [
     orgShort: { zh: '地平线机器人', en: 'Horizon Robotics' },
     kind: 'internal',
     tagline: {
-      zh: '把散落在文档与个人经验里的数据生产知识沉淀为 Agent Skill，封装成容器化问答服务常驻集群，团队在协作工具里直接提问即得可执行答案',
-      en: 'Codifying tribal knowledge of data production into an Agent Skill, packaged as a containerized Q&A service running persistently on the cluster — the team asks in chat and gets executable answers',
+      zh: '把团队数据生产的经验知识整理成 Agent Skill 文档，封装为常驻集群的问答服务，团队在协作工具里提问即得答案',
+      en: 'Codifying the team’s data-production know-how into an Agent Skill, packaged as an always-on Q&A service on the cluster — ask in chat, get the answer',
     },
     sections: [
       {
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '数据生产链路的知识高度依赖个人经验：流水线有哪些步骤、每步参数怎么填、不同项目类型的阈值差异、历史数据集与标注记录的对应关系 —— 这些分散在文档、脚本注释和少数几个人的记忆里。新人上手要反复打断他人，老人则被同类问题反复消耗。文档本身不解决问题：它是静态的，读者仍需自行判断「我的场景该用哪组参数」。真正的瓶颈不是缺少文档，而是知识无法被随时、准确地检索到。',
-          en: 'Knowledge of the data-production chain lived largely in individual experience: which stages the pipeline has, how each parameter should be filled, how thresholds differ across project types, how historical datasets map to annotation records — scattered across documents, script comments, and a few people\u2019s memory. Onboarding required repeatedly interrupting others; veterans were drained by the same recurring questions. Documentation alone does not solve this: it is static, and the reader still has to judge which parameter set applies to their case. The real bottleneck was never a shortage of documents — it was that the knowledge could not be retrieved reliably on demand.',
+          zh: '数据生产链路的知识——流程步骤、参数怎么填、不同项目类型的阈值差异——散落在文档、脚本注释和少数人的记忆里。文档是静态的，读者仍需自行判断「我的场景该用哪组参数」；瓶颈不在缺文档，而在知识无法被随时、准确地检索到。',
+          en: 'Knowledge of the data-production chain — pipeline stages, parameter choices, per-project-type thresholds — was scattered across documents, script comments and a few people\u2019s memory. Documents are static; the reader still has to judge which parameter set applies. The bottleneck was never missing documentation, but knowledge that could not be retrieved reliably on demand.',
         },
       },
       {
-        id: 'skill',
-        label: { zh: '知识沉淀', en: 'Codification' },
+        id: 'approach',
+        label: { zh: '方案', en: 'Approach' },
         points: {
           zh: [
-            '结构化重组 —— 将全流程知识整理为一套 Agent Skill：能力概览、快速路由表、速查卡、参考文档四层结构。路由表把「用户意图」直接映射到「查哪一节」，让检索一步到位而不是全文扫读',
-            '边界显式声明 —— 为 Skill 明确定义三类越界情形（数据查询超范围、功能超工具能力、流程超现有框架）及各自的处置话术。核心原则写进文档：宁可直接说「不在范围内」，也不编造任何具体 ID、路径、阈值或命令',
-            '可执行优先 —— 每个能力条目都落到可直接复制运行的命令与参数，而非概念描述。判断依据（如不同项目类型的去重阈值、批大小、格式支持矩阵）以表格固化，消除口头传递中的歧义',
+            '知识沉淀 —— 将全流程知识整理为一套 Agent Skill：能力概览、快速路由表、速查卡、参考文档四层结构，把「用户意图」直接映射到对应内容；条目全部落到可直接复制运行的命令与参数，并显式声明越界情形——宁答「不在范围内」，不编造任何 ID、路径或命令',
+            '服务化 —— 封装为容器化问答服务常驻集群：接入协作工具监听群消息，先回执确认、再异步生成答案；以会话 ID 维持多轮追问，回复渲染为平台原生卡片，命令可直接复制',
+            '可靠性 —— 约束子会话仅依据 Skill 文档作答，从机制上杜绝答案编造；容器化交付消除环境差异，集群常驻使可用性不依赖任何个人终端',
           ],
           en: [
-            'Structural reorganization — reorganized end-to-end knowledge into an Agent Skill with four layers: capability overview, fast routing table, quick-reference cards, and reference documents. The routing table maps user intent directly to the relevant section, making retrieval a single step rather than a full-text scan',
-            'Explicit boundaries — defined three classes of out-of-scope requests (queries beyond recorded data, functionality beyond the tooling, processes beyond the existing framework) with prescribed responses for each. The governing principle is written into the document: better to say "not in scope" than to fabricate any ID, path, threshold, or command',
-            'Executable-first — every capability entry resolves to commands and parameters that can be copied and run, not conceptual description. Decision criteria (dedup thresholds, batch sizes, format support matrices per project type) are fixed in tables, eliminating the ambiguity of verbal handoff',
-          ],
-        },
-      },
-      {
-        id: 'service',
-        label: { zh: '服务化', en: 'Service' },
-        points: {
-          zh: [
-            '协作工具接入 —— 以事件订阅方式监听群消息，收到提问先回执确认、再异步生成答案，避免长耗时推理阻塞交互体验',
-            '上下文延续 —— 以会话 ID 维持多轮对话状态，追问不必重述前提；同时约束子会话仅依据 Skill 文档作答、禁用文件搜索类工具，从机制上杜绝答案漂移到文档之外',
-            '结构化渲染 —— 将 Markdown 回复解析后映射为协作平台的原生卡片元素（标题、列表、代码块、引用、表格），命令可直接复制，而不是一段难以辨读的纯文本',
-            '凭据安全 —— 认证密钥以 AESGCM 加密存储于本地，运行时解出换取访问令牌，不落明文',
-          ],
-          en: [
-            'Chat integration — subscribes to group message events; on receiving a question it first acknowledges, then generates the answer asynchronously, so long-running inference never blocks the interaction',
-            'Context continuity — maintains multi-turn state via session IDs so follow-ups need no restatement; the sub-session is simultaneously constrained to answer only from the Skill documents with file-search tooling disabled, structurally preventing drift beyond the source',
-            'Structured rendering — parses Markdown replies and maps them onto native platform card elements (headings, lists, code blocks, quotes, tables), so commands are directly copyable rather than an unreadable wall of text',
-            'Credential safety — authentication secrets are stored AESGCM-encrypted locally and exchanged for access tokens at runtime; nothing is persisted in plaintext',
-          ],
-        },
-      },
-      {
-        id: 'ops',
-        label: { zh: '部署运维', en: 'Deployment' },
-        points: {
-          zh: [
-            '容器化交付 —— 将运行环境固化为镜像发布到内部仓库，环境与代码一同版本化，消除「本地能跑集群跑不了」的差异',
-            '集群常驻 —— 以单节点 DAG 提交至计算平台长期运行，纯 CPU 资源、不限时长；相较个人机器部署，可用性不依赖任何一台终端是否开机',
-            '最小权限 —— 所有数据挂载统一降级为只读。服务只需读取知识文档，写权限对它没有意义，却会放大误操作的后果',
-            '进程自愈 —— 启动时清理残留进程并写入 PID 文件，接收终止信号时回收子进程与锁文件，避免重复实例与僵尸进程',
-          ],
-          en: [
-            'Containerized delivery — the runtime environment is fixed into an image published to the internal registry, versioning environment alongside code and eliminating "works locally, fails on the cluster" divergence',
-            'Persistent on cluster — submitted as a single-node DAG for long-running execution on CPU-only resources with no wall-clock limit; unlike a workstation deployment, availability does not depend on any one machine being powered on',
-            'Least privilege — all data mounts are uniformly downgraded to read-only. The service only needs to read knowledge documents; write access buys nothing and magnifies the blast radius of mistakes',
-            'Self-healing process — clears residual processes and writes a PID file on startup, and reclaims child processes and lock files on termination signals, preventing duplicate instances and zombies',
+            'Codification — reorganized end-to-end knowledge into an Agent Skill with four layers: capability overview, fast routing table, quick-reference cards and reference documents, mapping user intent straight to the relevant entry; every entry resolves to copyable commands and parameters, and out-of-scope cases are declared explicitly — better to say "not in scope" than fabricate any ID, path or command',
+            'Service — packaged as a containerized Q&A service running persistently on the cluster: subscribed to group chat events, acknowledging first and answering asynchronously; session IDs carry multi-turn follow-ups, replies rendered as native platform cards with directly copyable commands',
+            'Reliability — sub-sessions are constrained to answer only from the Skill documents, structurally preventing fabrication; containerized delivery eliminates environment drift, and cluster residency frees availability from any personal workstation',
           ],
         },
       },
@@ -664,8 +626,8 @@ export const PROJECTS: Project[] = [
           { value: '0', label: { zh: '答案越界编造（边界显式约束）', en: 'Fabricated answers by design' } },
         ],
         body: {
-          zh: '知识从「问人」变为「问服务」：团队在日常协作工具里直接提问即可得到带命令与参数的可执行答案，无需打断他人、也无需自行翻阅文档判断适用场景。这个项目对我的意义在于验证了一条路径 —— 个人经验可以被系统性地转化为团队随时可调用的工程资产，而承载它的既不是一份没人读的文档，也不是一个需要专人维护的平台，而是一个能自己跑下去的服务。',
-          en: 'Knowledge shifted from "ask a person" to "ask a service": the team asks in their everyday chat tool and receives executable answers complete with commands and parameters — without interrupting colleagues or manually judging which documented case applies. What the project proved to me is a path: individual experience can be systematically converted into an engineering asset the team can invoke at any time, carried neither by a document nobody reads nor by a platform requiring a dedicated maintainer, but by a service that keeps running on its own.',
+          zh: '知识从「问人」变为「问服务」：团队在日常协作工具里提问即得带命令与参数的可执行答案。项目验证了一条路径——个人经验可以系统性转化为团队随时可调用的工程资产，载体是一个能自己跑下去的服务。',
+          en: 'Knowledge shifted from "ask a person" to "ask a service": the team asks in their everyday chat tool and gets executable answers with commands and parameters. The project proved a path — individual experience can be systematically converted into an engineering asset the team invokes on demand, carried by a service that keeps running on its own.',
         },
       },
     ],
@@ -688,63 +650,31 @@ export const PROJECTS: Project[] = [
     orgShort: { zh: '开源项目', en: 'Open Source' },
     kind: 'oss',
     tagline: {
-      zh: '独立完成产品设计至运维全链路的金融计算系统，约 4 万行 TypeScript，无后端架构，已开源',
-      en: 'A financial-computation system taken from product design through operations single-handedly — ~40K lines of TypeScript, backend-free, open source',
+      zh: '以 AI 协作为核心工作方式，独立完成从产品设计到运维的完整产品交付，验证数据工程师用 AI 独立开发全栈产品的可行性',
+      en: 'AI collaboration as the core working method, delivering a complete product from design through operations solo — probing how far a data engineer can go building full-stack products with AI',
     },
     sections: [
       {
         id: 'context',
         label: { zh: '背景', en: 'Context' },
         body: {
-          zh: '场内基金的实时估值分散于天天基金、东方财富、腾讯财经、Yahoo 等多个公开接口之后，数据格式各异、限流策略不一、可用性不稳定。持仓侧的复杂度更高：T+N 申赎确认、跨日结算、分红再投、净值重校准、成本基准回算——每条规则孤立看均不困难，但相互耦合后极易产生计算偏差，而偏差的对象是用户的真实资产。既有工具或要求用户将持仓数据托管至其服务器，或计算过程完全不透明、无法独立验证。',
-          en: 'Real-time valuations for exchange-traded funds sit behind a spread of public endpoints — Tiantian, Eastmoney, Tencent Finance, Yahoo — differing in format, rate-limiting policy, and availability. The portfolio side is more complex still: T+N confirmation, cross-day settlement, dividend reinvestment, NAV recalibration, cost-basis recomputation. Each rule is unremarkable in isolation, but their coupling readily produces computational error — and the object of that error is a user’s actual assets. Existing tools either require hosting holdings on their servers, or expose no auditable computation path.',
+          zh: '场内基金实时估值分散在多个公开接口之后，格式各异、可用性不稳；持仓计算涉及 T+N 申赎、跨日结算、分红再投等相互耦合的金融规则，而既有工具或要求托管持仓数据、或计算过程完全不透明。选这个题目做独立开发，一方面是真实需求，另一方面它恰好覆盖前端、金融计算、质量工程——是一块足够复杂的试金石，可以系统性地验证「AI 协作开发」这条工作方式的边界。',
+          en: 'Real-time fund valuations sit behind a spread of public endpoints with inconsistent formats and availability; portfolio computation involves tightly coupled financial rules — T+N confirmation, cross-day settlement, dividend reinvestment — while existing tools either demand custody of holdings or expose no auditable computation path. The topic was chosen for two reasons: it is a real need, and its breadth — front end, financial computation, quality engineering — makes it a demanding testbed for systematically probing the boundary of AI-collaborative development.',
         },
       },
       {
-        id: 'architecture',
-        label: { zh: '架构', en: 'Architecture' },
+        id: 'ai',
+        label: { zh: 'AI 协作开发', en: 'AI Collaboration' },
         points: {
           zh: [
-            '多 Worker 并发取数架构（v3.0 重构）—— 四个数据源互为兜底，单源失效自动降级切换，请求参数按源差异化收紧以规避限流；上一交易日数据逐条校验后方可进入缓存，杜绝脏数据污染下游计算',
-            '无后端设计 —— 以 JSONP 直连公开接口规避跨域限制，全部数据驻留 localStorage。该架构同时解决三个问题：零服务器成本、用户资产数据不出本地、可直接静态部署至 GitHub Pages',
-            'PWA 完整支持 —— iOS 可添加至主屏并以独立应用形态运行；以 pageshow 事件兜底解决 Safari 页面缓存导致的跨日状态不刷新；离线状态下缓存数据仍可读',
+            'AI 驱动的全栈学习 —— 前端框架、PWA、金融计算规则均非既有积累，以 AI 协作边学边做：先让 AI 讲透原理与选型依据，再落到代码验证，学习成本从「翻文档数周」压缩为「按天计的迭代」',
+            '复杂逻辑的 AI 辅助设计 —— T+N 申赎、分红再投、净值重校准存在计算顺序依赖，把业务规则显式讲给 AI、由 AI 辅助推导状态机结构，再以实际数据回归验证——AI 负责扩展设计空间，人对正确性负最终责任',
+            '质量兜底的 AI 时代做法 —— 在无同行评审的独立开发中，让 AI 生成功能域回归用例、人工审校边界条件后接入 pre-commit 钩子，构造出独立开发也可信的质量底线',
           ],
           en: [
-            'Multi-worker concurrent fetching (the v3.0 rewrite) — four mutually-backing sources with automatic failover, per-source differentiated request parameters to evade rate limits, and previous-trading-day data validated row by row before entering cache, preventing dirty data from contaminating downstream computation',
-            'Backend-free design — JSONP direct to public endpoints circumvents CORS; all data resides in localStorage. The architecture resolves three concerns simultaneously: zero server cost, user asset data never leaving the device, and direct static deployment to GitHub Pages',
-            'Full PWA support — installable to the iOS home screen and running as a standalone application; a pageshow-event fallback resolves stale cross-day state caused by Safari page caching; cached data remains readable offline',
-          ],
-        },
-      },
-      {
-        id: 'domain',
-        label: { zh: '金融计算', en: 'Domain Logic' },
-        points: {
-          zh: [
-            '完整持仓状态机 —— T+2 待确认订单在净值更新后即刻成交；同日买入与卖出互不干扰、独立结算；手工录入型持仓不被净值重校准覆盖。每一条边界条件均源自实际踩坑后的回补，而非事前设想',
-            '收益归因链路 —— 分红再投、成本基准回算、跨日结算三者存在计算顺序依赖，任一环节顺序错置都将导致持仓成本失真，故以显式状态机而非隐式条件分支实现',
-            '计算过程可审计 —— 估值推导路径对用户完全透明，这是本项目相对既有闭源工具的根本差异',
-          ],
-          en: [
-            'Complete portfolio state machine — T+2 pending orders settle the moment NAV updates; same-day buys and sells remain independent and settle separately; manually entered positions are never clobbered by NAV recalibration. Every one of these boundary conditions was added after encountering it in practice, not anticipated in design',
-            'Return-attribution chain — dividend reinvestment, cost-basis recomputation and cross-day settlement carry ordering dependencies, and misordering any one distorts position cost; the logic is therefore implemented as an explicit state machine rather than implicit conditional branching',
-            'Auditable computation — the valuation derivation path is fully transparent to the user, the fundamental differentiator against existing closed-source tools',
-          ],
-        },
-      },
-      {
-        id: 'quality',
-        label: { zh: '质量工程', en: 'Quality' },
-        points: {
-          zh: [
-            '19 个功能域自动化回归网 —— 覆盖页面渲染、持仓计算、跨日结算、取数容错、UI 手势交互；退出码接入 pre-commit 钩子，回归失败则提交被阻断',
-            '可定位的失败输出 —— 失败信息精确至「卡在第几步 · 观测到的现象 · 用例所在文件」，单次改动波及的全部用例一次性呈现，消除靠猜测定位问题的环节',
-            '一人开发下的质量替代方案 —— 无同行评审的条件下，自动化回归网是唯一可信的质量兜底；这也是该项目敢于持续重构至 v3.0 的前提',
-          ],
-          en: [
-            'Automated regression net across 19 functional domains — covering page rendering, position computation, cross-day settlement, fetch resilience and UI gesture interaction; the exit code is wired into a pre-commit hook so a failing regression blocks the commit',
-            'Localizable failure output — failures report the exact step, the observed symptom, and the originating case file, presenting every case a single change affects at once and eliminating guesswork from diagnosis',
-            'A quality substitute under solo development — absent peer review, the automated regression net is the only trustworthy backstop; it is also the precondition that made continuous refactoring through v3.0 feasible',
+            'AI-driven full-stack learning — front-end frameworks, PWA and financial-computation rules were all new territory; the loop was learn-from-AI-then-verify-in-code, compressing the learning cost from weeks of documentation reading to iteration measured in days',
+            'AI-assisted design of complex logic — T+N confirmation, dividend reinvestment and NAV recalibration carry ordering dependencies; business rules were spelled out to the AI, which helped derive the state-machine structure, then validated against real data — AI expands the design space, while correctness remains a human liability',
+            'Quality backstop in the AI era — without peer review, AI generated functional-domain regression cases, humans audited the boundary conditions, and the result was wired into a pre-commit hook: a trustworthy quality floor even for solo development',
           ],
         },
       },
@@ -752,17 +682,16 @@ export const PROJECTS: Project[] = [
         id: 'outcome',
         label: { zh: '成果', en: 'Outcome' },
         metrics: [
-          { value: '4 万行', label: { zh: 'TypeScript 独立交付', en: 'Lines of TypeScript, solo' } },
-          { value: '19', label: { zh: '功能域回归覆盖', en: 'Functional domains covered' } },
-          { value: 'v3.0', label: { zh: '已上线并持续迭代', en: 'Live and iterating' } },
+          { value: '已上线', label: { zh: '开源 · 在线体验可用', en: 'Open source · live demo' } },
+          { value: 'v3.0', label: { zh: '持续重构迭代', en: 'Refactored and iterating' } },
         ],
         body: {
-          zh: '产品设计、架构、编码、部署、运维全链路由一人完成，已上线稳定运行并迭代至 v3.0，源码与在线体验均已开放。该项目验证了一个此前未被证实的命题：在 AI 协作条件下，一名数据工程师可独立交付具备真实用户、金融计算复杂度与可控工程质量的完整产品——三者同时成立，而非以牺牲其中之一为代价。',
-          en: 'Product design, architecture, implementation, deployment and operations were executed entirely solo; the system is live, stable, and has iterated through v3.0, with source and a live demo both public. The project validated a proposition previously unproven for me: under AI collaboration, a single data engineer can independently ship a complete product with real users, genuine financial-computation complexity, and controlled engineering quality — all three holding simultaneously, rather than one being sacrificed for another.',
+          zh: '系统已上线并迭代至 v3.0，源码与在线体验公开。项目验证的核心命题是：以 AI 协作为工作方式，一名数据工程师可以把非既有领域的复杂产品独立做到可上线、可维护、可验证——学习能力不再受既有技术栈限制，而取决于把问题拆解清楚并驱动 AI 的能力。',
+          en: 'The system is live through v3.0 with source and demo public. The proposition it validated: with AI collaboration as the working method, a data engineer can take a complex product outside their existing stack solo to shipped, maintainable and verifiable — learning capacity is no longer bounded by one’s current stack, but by the ability to decompose problems clearly and drive the AI.',
         },
       },
     ],
-    stack: ['Vue 3', 'TypeScript', 'Vite', 'Pinia', 'ECharts', 'Tailwind', 'Vitest', 'PWA'],
+    stack: ['Vue 3', 'TypeScript', { zh: 'AI 协作开发', en: 'AI Collaboration' }, 'Vitest', 'PWA'],
     links: [
       { label: { zh: '在线体验', en: 'Live demo' }, href: 'https://L-newbie.github.io/real-time-valuation/' },
       { label: { zh: '源码', en: 'Source' }, href: 'https://github.com/L-newbie/real-time-valuation' },
@@ -822,14 +751,6 @@ export const SKILLS: SkillGroup[] = [
           en: 'Reliability comes from constraints, not clever phrasing: restrict the available tools, restrict the information sources, and prescribe what to do when a request falls outside them. Getting a model to reliably say "I do not know" carries more engineering value than getting it to answer elegantly.',
         },
       },
-      {
-        name: { zh: 'RAG 检索增强', en: 'RAG' },
-        level: 0.78,
-        detail: {
-          zh: '为知识服务构建检索层，让回答严格锚定在文档原文而不是模型的先验记忆 —— 这是「答案可被核实」在大模型场景下的等价要求。',
-          en: 'Built the retrieval layer for a knowledge service so answers anchor strictly to source documents rather than the model\u2019s prior — the LLM-era equivalent of the requirement that a conclusion be verifiable.',
-        },
-      },
     ],
   },
   {
@@ -861,40 +782,12 @@ export const SKILLS: SkillGroup[] = [
         },
       },
       {
-        name: { zh: '生成式数据合成', en: 'Generative Data Synthesis' },
-        level: 0.8,
-        key: true,
-        note: { zh: '文生图 / 图生图补长尾样本', en: 'Text-to-image, image-to-image for long-tail' },
-        detail: {
-          zh: '真实世界里罕见的场景，采集成本可能高到不现实。用世界模型与扩散类模型合成或改写场景（换光照、换天气、插入低频目标），把「等它自然发生」变成「按需构造」。合成数据的价值取决于它是否覆盖了真实分布的空缺，而不是看起来像不像。',
-          en: 'Scenarios rare in the real world can be prohibitively expensive to collect. World models and diffusion-based generation synthesize or rewrite scenes — relighting, weather transfer, inserting low-frequency targets — turning "wait for it to happen" into "construct it on demand". Synthetic data is worth what gaps it fills in the real distribution, not how convincing it looks.',
-        },
-      },
-      {
         name: { zh: '目标检测', en: 'Object Detection' },
         level: 0.84,
         note: { zh: 'YOLO 系列，量产侧主力', en: 'YOLO family — the production workhorse' },
         detail: {
           zh: '量产侧真正跑在车上的仍是轻量检测器。我的位置在数据侧：决定它用什么数据训、在什么切片上退化、下一批该补什么。',
           en: 'What actually runs on the vehicle is still a lightweight detector. My position is on the data side: deciding what it trains on, which slices it regresses on, and what the next batch must supply.',
-        },
-      },
-      {
-        name: { zh: '模型评测与归因', en: 'Evaluation & Attribution' },
-        level: 0.9,
-        key: true,
-        note: { zh: '指标退化定位到数据切片', en: 'Regression traced to a data slice' },
-        detail: {
-          zh: '评测的终点不是一个 mAP 数字，而是「哪一类数据让它变差了」。指标退化必须能指向具体切片，才对下一轮迭代有意义 —— 这和我做刑侦分析时的标准是同一条：结论要落到别人能去核实的那一步。',
-          en: 'An evaluation does not end at an mAP number but at which class of data degraded it. A regression must resolve to a specific slice to matter for the next iteration — the same standard I held doing criminal-investigation analytics: a conclusion has to land somewhere another party can verify.',
-        },
-      },
-      {
-        name: 'PyTorch / OpenCV',
-        level: 0.76,
-        detail: {
-          zh: '训练与推理的落地层：数据加载、预处理、批量推理脚本。我不改网络结构，但要保证喂进去的数据和评测口径是对的。',
-          en: 'The layer where training and inference land: data loading, preprocessing, batch inference scripts. I do not alter architectures, but I do guarantee that what goes in and how it is scored are correct.',
         },
       },
     ],
@@ -928,16 +821,6 @@ export const SKILLS: SkillGroup[] = [
         },
       },
       {
-        name: { zh: '时序数据挖掘', en: 'Time-Series Mining' },
-        level: 0.9,
-        key: true,
-        note: { zh: '帧级消息聚合为 timeline 事件', en: 'Frames into timeline events' },
-        detail: {
-          zh: '把离散的帧级消息按目标维度聚合成有明确起止边界的事件，使「某个目标在某段时间的完整行为」成为可检索的一等对象，而不是散落的孤立帧。',
-          en: 'Aggregates discrete frame-level messages along the object dimension into events with explicit boundaries, making "the complete behavior of one object over an interval" a first-class retrievable object rather than scattered frames.',
-        },
-      },
-      {
         name: { zh: '爬虫与数据采集', en: 'Crawling & Collection' },
         level: 0.88,
         key: true,
@@ -945,15 +828,6 @@ export const SKILLS: SkillGroup[] = [
         detail: {
           zh: '自研爬虫采集公开征信平台的企业与人员关联信息，把内部数据里孤立的节点接上真实的人，拓展出仅凭内部数据无法观察到的关联路径。',
           en: 'Purpose-built crawlers collected corporate and personnel relations from public registries, connecting otherwise isolated internal nodes to real individuals and surfacing paths unobservable from internal data alone.',
-        },
-      },
-      {
-        name: { zh: 'Badcase 自动仿真', en: 'Automated Bad-case Sim' },
-        level: 0.87,
-        note: { zh: '归因周期压缩为一次看板浏览', en: 'Attribution in one dashboard read' },
-        detail: {
-          zh: '为误检漏检制定可复现的检测规则，任务启动即自动跑完当前专题全部 badcase 并产出分析看板。把「是不是一个 badcase」从主观判断转为规则判定，是这件事能自动化的前提。',
-          en: 'Defined reproducible detection rules for false positives and negatives; a job run traverses every bad case under a topic and renders an analytics dashboard. Converting "is this a bad case" from subjective judgment into rule-based determination is what made automation possible at all.',
         },
       },
       {
@@ -965,14 +839,14 @@ export const SKILLS: SkillGroup[] = [
           en: 'Dozens of tables with mutually inconsistent field semantics, consolidated through cleaning, deduplication and entity alignment. The same method has held across finance, criminal investigation and autonomous driving — what I rely on is methodology, not one industry\u2019s accumulated tricks.',
         },
       },
-],
+    ],
   },
   {
     label: { zh: '代码与工程交付', en: 'Code & Delivery' },
     core: true,
     caption: {
-      zh: '一个人四万行代码做到上线并迭代至 v3.0。质量不靠人盯，靠 19 个功能域的自动化回归网接进提交钩子。',
-      en: '40K lines shipped solo, live and iterated through v3.0. Quality is not held by attention but by an automated regression net across 19 domains wired into the commit hook.',
+      zh: '写的不是一次性脚本：数据链路以 DAG 编排、可独立重跑，打包产出带完整清单与校验记录。质量靠机制兜底，不靠人盯。',
+      en: 'Not one-off scripts: pipelines orchestrated as DAGs with independently re-runnable stages, packaging outputs shipping with complete manifests and verification records. Quality is held up by mechanisms, not by supervision.',
     },
     items: [
       {
@@ -981,28 +855,8 @@ export const SKILLS: SkillGroup[] = [
         key: true,
         note: { zh: '日常主力语言', en: 'Daily driver' },
         detail: {
-          zh: '七年一线的主力语言：数据治理、挖掘流水线、仿真调度、爬虫、服务化，全部在这上面完成。',
+          zh: '七年一线的主力语言：数据治理、挖掘流水线、数据打包、爬虫、服务化，全部在这上面完成。',
           en: 'The workhorse across seven years on the front line: data governance, mining pipelines, simulation orchestration, crawlers and service delivery all built on it.',
-        },
-      },
-{
-        name: { zh: '自动化测试', en: 'Automated Testing' },
-        level: 0.85,
-        key: true,
-        note: { zh: '19 个功能域回归网', en: '19-domain regression net' },
-        detail: {
-          zh: '一人开发没有同行评审，自动化回归网是唯一可信的质量兜底 —— 也正是它让持续重构到 v3.0 成为可能。失败输出精确到「第几步 · 什么现象 · 哪个用例」，消除靠猜定位的环节。',
-          en: 'Under solo development there is no peer review, so the regression net is the only trustworthy backstop — and precisely what made refactoring through v3.0 feasible. Failures report the exact step, the observed symptom and the originating case, eliminating guesswork from diagnosis.',
-        },
-      },
-      {
-        name: { zh: '容器化与集群部署', en: 'Containers & Cluster Ops' },
-        level: 0.82,
-        key: true,
-        note: { zh: '镜像发布 + 长驻作业', en: 'Image publishing, persistent jobs' },
-        detail: {
-          zh: '把运行环境固化为镜像，服务以长驻作业跑在集群上，可用性不依赖任何一台终端是否开机。数据挂载一律只读 —— 服务只需读取，写权限对它没有意义却会放大误操作的后果。',
-          en: 'Runtime environments fixed into images, services running as persistent cluster jobs so availability never depends on one machine being powered on. Data mounts are uniformly read-only — the service only reads, and write access buys nothing while magnifying the blast radius.',
         },
       },
       {
@@ -1011,14 +865,6 @@ export const SKILLS: SkillGroup[] = [
         detail: {
           zh: '数十张异构表的整合入库与联合查询。清洗和实体对齐做完之后，检索能力才是数据资产真正兑现的地方。',
           en: 'Consolidating dozens of heterogeneous tables into one queryable store. Once cleaning and entity alignment are done, retrieval is where the data asset actually pays off.',
-        },
-      },
-      {
-        name: 'Pandas / NumPy',
-        level: 0.88,
-        detail: {
-          zh: '日常分析与批处理的主力。缺失值、异常值、重复记录的识别与修正大多在这一层完成 —— 脏数据流到下游，后面每一步都在放大它。',
-          en: 'The workhorse for daily analysis and batch processing. Detection and correction of missing values, outliers and duplicates mostly happen here — dirty data flowing downstream gets amplified at every later step.',
         },
       },
       {
