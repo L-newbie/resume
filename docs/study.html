@@ -1,0 +1,830 @@
+<!--
+ * @Author:  weidong.he
+ * @Date: 2026-09-17 10:38:48
+ * @LastEditTime: 2026-09-17 10:38:49
+ * @LastEditors:  weidong.he
+ * @FilePath: /poly_app/resume/docs/study.html
+ * @Description:  请在此处输入脚本功能描述
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLOps 12 周转型路线图</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --card2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --purple: #bc8cff;
+    --orange: #d29922;
+    --red: #f85149;
+    --cyan: #39c5cf;
+    --pink: #ff7b72;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding-bottom: 100px;
+  }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ─── Hero ─── */
+  .hero {
+    text-align: center;
+    padding: 56px 24px 40px;
+    background: linear-gradient(180deg, rgba(88,166,255,.08), transparent 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--blue), var(--purple), var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .subtitle { color: var(--muted); margin-top: 10px; font-size: 15px; }
+  .hero .strategy {
+    margin-top: 18px;
+    display: inline-block;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 14px;
+    color: var(--text);
+    max-width: 860px;
+  }
+  .hero .strategy b { color: var(--purple); }
+
+  /* ─── Info bar ─── */
+  .info-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 28px 0;
+  }
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    font-size: 14px;
+  }
+  .info-card .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .info-card .v { font-weight: 600; margin-top: 4px; }
+  .info-card .v.blue { color: var(--blue); }
+  .info-card .v.green { color: var(--green); }
+  .info-card .v.purple { color: var(--purple); }
+  .info-card .v.orange { color: var(--orange); }
+
+  /* ─── Teaching mode ─── */
+  .mode-banner {
+    background: linear-gradient(135deg, rgba(188,140,255,.10), rgba(88,166,255,.08));
+    border: 1px solid rgba(188,140,255,.35);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 30px;
+    font-size: 14px;
+  }
+  .mode-banner h3 { font-size: 15px; color: var(--purple); margin-bottom: 8px; }
+  .mode-banner ol { margin-left: 20px; }
+  .mode-banner li { margin: 4px 0; }
+  .mode-banner li b { color: var(--cyan); }
+
+  /* ─── Stage sections ─── */
+  .stage { margin-top: 46px; }
+  .stage-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .stage-num {
+    font-size: 40px;
+    font-weight: 900;
+    opacity: .25;
+    line-height: 1;
+  }
+  .stage-header h2 { font-size: 22px; }
+  .stage-week {
+    font-size: 12px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+    color: var(--muted);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .stage-goal { color: var(--muted); font-size: 14px; margin-bottom: 18px; padding-left: 2px; }
+  .stage-goal b { color: var(--text); }
+
+  .s1 h2, .s1 .stage-num { color: var(--blue); }
+  .s2 h2, .s2 .stage-num { color: var(--purple); }
+  .s3 h2, .s3 .stage-num { color: var(--green); }
+  .s4 h2, .s4 .stage-num { color: var(--orange); }
+
+  /* ─── Node cards ─── */
+  .nodes { display: flex; flex-direction: column; gap: 12px; }
+  .node {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--blue);
+    border-radius: 10px;
+    padding: 16px 20px;
+    transition: border-color .15s, transform .15s;
+  }
+  .node:hover { transform: translateX(4px); border-color: var(--muted); }
+  .s1 .node { border-left-color: var(--blue); }
+  .s2 .node { border-left-color: var(--purple); }
+  .s3 .node { border-left-color: var(--green); }
+  .s4 .node { border-left-color: var(--orange); }
+  .node.star { border-left-color: var(--cyan); }
+
+  .node-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .node-id {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 700;
+    font-size: 13px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .s1 .node-id { color: var(--blue); }
+  .s2 .node-id { color: var(--purple); }
+  .s3 .node-id { color: var(--green); }
+  .s4 .node-id { color: var(--orange); }
+  .node-title { font-weight: 700; font-size: 15px; }
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .tag.key { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.4); }
+  .tag.star { background: rgba(57,197,207,.12); color: var(--cyan); border: 1px solid rgba(57,197,207,.4); }
+  .tag.check { background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.4); }
+
+  .node-body { margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+  .node-body .row { margin: 5px 0; }
+  .node-body .row b { color: var(--text); }
+  .node-body .row .lbl {
+    display: inline-block;
+    width: 74px;
+    color: var(--cyan);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .node-body .row.act .lbl { color: var(--orange); }
+  .node-body .row.acc .lbl { color: var(--green); }
+  .node-body .row.con .lbl { color: var(--purple); }
+
+  /* ─── Callouts ─── */
+  .callout {
+    background: var(--card2);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 14px 0 20px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .callout.warn { border-color: rgba(210,153,34,.5); color: var(--orange); }
+  .callout b { color: var(--text); }
+
+  /* ─── Mermaid placeholder ─── */
+  .arch {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin: 14px 0;
+    font-size: 13px;
+    text-align: center;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  /* ─── Interview table ─── */
+  .qa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .qa {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+  .qa .q { color: var(--pink); font-weight: 600; }
+  .qa .a { color: var(--muted); margin-top: 4px; }
+  .qa .a b { color: var(--green); }
+
+  /* ─── Progress table ─── */
+  .progress-wrap { margin-top: 46px; }
+  table.progress {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  table.progress th {
+    background: var(--card2);
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  table.progress td { padding: 8px 14px; border-top: 1px solid var(--border); }
+  table.progress tr:hover td { background: rgba(88,166,255,.04); }
+  .node-chip {
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 7px;
+    margin-right: 6px;
+  }
+  .st { color: var(--muted); }
+  .st.done { color: var(--green); font-weight: 700; }
+  .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 50px; }
+
+  /* ─── Habits ─── */
+  .habits {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 24px 0 8px;
+  }
+  .habit {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .habit b { color: var(--text); display: block; margin-bottom: 4px; }
+  .habit .icon { font-size: 20px; }
+
+  @media (max-width: 720px) {
+    .hero h1 { font-size: 24px; }
+    .stage-num { display: none; }
+    .node-body .row .lbl { width: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🚀 Python MLOps 工程师转型通关路线图</h1>
+  <div class="subtitle">12 周 · 41 个节点 · 一个端到端平台 · weidong.he · 2026-09-10</div>
+  <div class="strategy">
+    <b>转型策略：扬长避短。</b>放弃复杂的算法数学推导，发挥 Python 编程优势，主攻
+    <b>分布式计算、高并发推理服务（Serving）与工程落地</b>，
+    用"系统稳定性与吞吐量调优能力"去解决 AI 科学家搞不定的工程痛点。
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="info-bar">
+    <div class="info-card">
+      <div class="k">⏱ 时间预算</div>
+      <div class="v blue">≈15h+/周 · 12 周成立</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px;">工作日 2-3h + 周末 4-6h</div>
+    </div>
+    <div class="info-card">
+      <div class="k">🧱 主线设定</div>
+      <div class="v purple">四阶段 = 一个平台的 4 次迭代</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px;">不是 4 个孤立项目，每次迭代互相衔接</div>
+    </div>
+    <div class="info-card">
+      <div class="k">🎓 教学模式</div>
+      <div class="v orange">阶段一零基础 · 三段式节点</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px;">异步/FastAPI/SSE/Docker/K8s 全部从零讲起</div>
+    </div>
+    <div class="info-card">
+      <div class="k">💰 GPU 预算</div>
+      <div class="v green">¥200-300（阶段二）</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px;">4090 租卡 40-60h，用完关机</div>
+    </div>
+  </div>
+
+  <div class="mode-banner">
+    <h3>📐 教学节奏：每个节点固定三段式（阶段一已按零基础拆至最细）</h3>
+    <ol>
+      <li><b>① 概念铺垫</b> — 我在对话里讲：是什么、为什么存在、类比、关键词</li>
+      <li><b>② 动手</b> — 你自己写、自己跑、自己 debug；卡壳超 10 分钟贴报错，我只给提示不给完整答案</li>
+      <li><b>③ 验收</b> — 你亲自跑出预期结果才算过 → commit → 下一个节点</li>
+    </ol>
+    <div style="margin-top:8px;color:var(--muted);font-size:12.5px;">阶段二~四先保持中粒度，进入前一周再按同样标准细化——那时你已有阶段一的地基，粒度需求不同。</div>
+  </div>
+
+  <div class="habits">
+    <div class="habit"><span class="icon">📌</span><b>每节点 = 一次 commit</b>验收通过才 commit，message 引用节点编号。GitHub 主线就是学习日志。</div>
+    <div class="habit"><span class="icon">📝</span><b>阶段结束写 stage_report.md</b>学了什么 + 踩坑 ≥3 条 + 性能数据表。将来直接拼成 README。</div>
+    <div class="habit"><span class="icon">⭐</span><b>进阶选做可跳</b>时间不够就跳过，不留恋，主线节点优先。</div>
+    <div class="habit"><span class="icon">✅</span><b>验收不过夜</b>看到预期结果才打勾，不靠感觉。</div>
+  </div>
+
+  <!-- ══════════ STAGE 1 ══════════ -->
+  <div class="stage s1">
+    <div class="stage-header">
+      <div class="stage-num">01</div>
+      <h2>📅 阶段一：打牢 AI 异步网关与云原生基础</h2>
+      <div class="stage-week">第 1-2 周 · N1-N19 · 19 个节点</div>
+    </div>
+    <div class="stage-goal">
+      <b>核心目标</b>：零基础亲手写出大模型网关四件套——<b>异步、SSE 流式、跨块敏感词过滤、令牌桶限流</b>——再用 Docker/K8s 部署上线。这些代码后面三个阶段全部复用。
+    </div>
+
+    <h3 style="color:var(--blue);font-size:15px;margin:20px 0 10px;">▍第 1 周前半（Day 1-3）：从零摸到异步与流式</h3>
+    <div class="nodes">
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N1</span><span class="node-title">环境就绪 + 调试器就绪</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>venv（依赖为什么必须隔离）、requirements.txt（可复现性）、VS Code 断点调试（debug 是学习的主通道）</div>
+          <div class="row act"><span class="lbl">动手</span>建 venv；装 fastapi/uvicorn/httpx/pydantic；pip freeze；git init + .vscode/launch.json</div>
+          <div class="row acc"><span class="lbl">验收</span>import 四件套无报错；F5 能断点单步进任意 py 脚本</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N2</span><span class="node-title">事件循环心智模型</span><span class="tag key">本阶段地基</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>协程=可暂停/恢复的函数；事件循环=唯一的工人；task=被排队的协程。口诀：<b>单线程单工人，谁 await 谁让出</b></div>
+          <div class="row act"><span class="lbl">动手</span>exp_event_loop.py：两个 async 函数循环打印名字，中间 await asyncio.sleep(0) 主动让出，gather 并发</div>
+          <div class="row acc"><span class="lbl">验收</span>输出 A/B 交错而非 AAA BBB；threading.active_count() 证实全程 1 线程</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N3</span><span class="node-title">同步 vs 异步体感实验</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>I/O 等待是什么；串行耗时=求和 vs 并发耗时=取最大</div>
+          <div class="row act"><span class="lbl">动手</span>exp_async.py：三次 await sleep(1) 串行 vs gather 并发，perf_counter 计时</div>
+          <div class="row acc"><span class="lbl">验收</span>串行 ≈3s、并发 ≈1s；能不看书说出为什么</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N4</span><span class="node-title">FastAPI Hello World（第一次接触 Web 框架）</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>uvicorn（监听端口收发字节）vs FastAPI（解析请求调用函数）的分工；路由；自动 /docs 文档</div>
+          <div class="row act"><span class="lbl">动手</span>hello.py：GET / + GET /greet/{name}；uvicorn 启动；玩 /docs</div>
+          <div class="row acc"><span class="lbl">验收</span>curl 两接口通；/docs 在线调用成功；能回答"请求进来 uvicorn 和 FastAPI 各干什么"</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N5</span><span class="node-title">最简流式接口（StreamingResponse 初体验）</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>普通响应 vs 流式响应（一次给全 vs 管道式一点点给）；异步生成器；TTFT 概念预告</div>
+          <div class="row act"><span class="lbl">动手</span>main.py：GET /stream 异步生成器逐字 yield，包 StreamingResponse，media_type=text/plain</div>
+          <div class="row acc"><span class="lbl">验收</span>curl -N 肉眼见逐字到达；两终端同时 curl，两路流同时推进</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N6</span><span class="node-title">SSE 协议标准化 + TTFT 实测</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>SSE 三要素（text/event-stream 头、data: ...\n\n 帧、连接保持）；两换行=帧边界；浏览器 EventSource；OpenAI 协议同构</div>
+          <div class="row act"><span class="lbl">动手</span>写 sse_format()（ensure_ascii=False 中文坑）；/stream 改标准帧；对比"yield在前"vs"sleep在前"的首字延迟</div>
+          <div class="row acc"><span class="lbl">验收</span>浏览器 EventSource 收到逐帧事件；背出 OpenAI 流式三件套；TTFT 差异有实测数字</div>
+        </div>
+      </div>
+
+    </div>
+
+    <h3 style="color:var(--blue);font-size:15px;margin:26px 0 10px;">▍第 1 周后半（Day 4-7）：网关核心四件套之协议与过滤</h3>
+    <div class="nodes">
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N7</span><span class="node-title">Pydantic 校验 + OpenAI 兼容接口（非流式）</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>Pydantic=请求体的海关（错字段自动 422）；OpenAI chat 协议结构（messages/role/content/choices/usage）</div>
+          <div class="row act"><span class="lbl">动手</span>ChatMessage/ChatRequest 模型；POST /v1/chat/completions 非流式分支，Mock 上游，响应对齐 OpenAI</div>
+          <div class="row acc"><span class="lbl">验收</span>官方 openai SDK 直连拿到回复；缺 messages 字段自动 422；能说出网关挡非法请求的意义</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N8</span><span class="node-title">流式分支总装（上游异步流 → SSE 帧）</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>异步生成器做"上游"的抽象意义（生产者慢消费者快，管道解耦）；delta.role 首帧惯例</div>
+          <div class="row act"><span class="lbl">动手</span>call_upstream_llm 异步生成器；stream=true 分支：首帧 role、中间帧 content、末帧 [DONE]</div>
+          <div class="row acc"><span class="lbl">验收</span>openai SDK stream=True 逐 token 收到；与非流式 TTFT 对比数字进日志</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N9</span><span class="node-title">跨 chunk 敏感词过滤</span><span class="tag key">面试高频</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>问题本质：敏感词被拆到相邻两块（「垃圾」+「话」）；解法直觉：<b>留尾巴</b>——只放行确认安全的前缀，扣 max_len-1 个字符在缓冲区等下块拼接</div>
+          <div class="row act"><span class="lbl">动手</span>①反面教材：拆块独立过滤亲眼看漏网；②实现 StreamFilter（push/flush+缓冲区）；③/demo/filter-demo 并排对比</div>
+          <div class="row acc"><span class="lbl">验收</span>naive 漏出、StreamFilter 被***替换、hit_count≥1；断点追一个词被拆两块的完整过程；能推导尾巴为何是 max_len-1</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N10</span><span class="node-title">令牌桶限流器 + 中间件 + 压测</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>为什么必须限流（保护后端）；令牌桶 vs 固定窗口（允许突发、平均不超标）；中间件=所有请求的收费站；探针接口必须豁免（否则 K8s 误杀，事故高发）</div>
+          <div class="row act"><span class="lbl">动手</span>手写 TokenBucket（rate/capacity/惰性补充/monotonic）；挂 @app.middleware；/stats 看板；load_test.py 30 并发</div>
+          <div class="row acc"><span class="lbl">验收</span>30 并发 → 恰好 10×200 + 20×429；/stats 计数吻合；429 带 Retry-After 头</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N11</span><span class="node-title">第 1 周复盘</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>week1_report：坑 ≥3 条 + N6 TTFT 对比表 + N10 压测数字；commit 推送</div>
+          <div class="row acc"><span class="lbl">验收</span>每条坑都是"现象→原因→解决"，不是流水账</div>
+        </div>
+      </div>
+
+    </div>
+
+    <h3 style="color:var(--blue);font-size:15px;margin:26px 0 10px;">▍第 2 周前半（Day 8-10）：Docker 化（从"容器是什么"讲起）</h3>
+    <div class="nodes">
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N12</span><span class="node-title">Docker 概念 + 第一个镜像</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>容器 vs 虚拟机（共享内核只隔离进程视角）；镜像=分层只读模板；容器=运行实例；"我机器上是好的"→镜像把环境连代码一起冻住</div>
+          <div class="row act"><span class="lbl">动手</span>Dockerfile（slim→pip→COPY→EXPOSE→CMD）；build；run；curl /healthz</div>
+          <div class="row acc"><span class="lbl">验收</span>容器内 /healthz、/stats 通；docker exec 确认代码和 Python 版本；镜像体积记录</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N13</span><span class="node-title">K8s：集群与 Pod 概念 + 单 Pod 部署</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>为什么有 K8s（容器多了谁管调度/自愈/扩缩）；Master/Node；Pod=最小调度单位（一组共享网络存储的容器）；声明式=自愈的本质</div>
+          <div class="row act"><span class="lbl">动手</span>kubectl run + port-forward；describe pod 看事件链 Pending→Pulling→Created→Started</div>
+          <div class="row acc"><span class="lbl">验收</span>port-forward 后 curl /healthz 通；能用自己的话讲 Pod；describe 输出能看懂大半</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N14</span><span class="node-title">K8s：Deployment + 探针（声明式的第一次威力）</span></div>
+        <div class="node-body">
+          <div class="row con"><span class="lbl">概念铺垫</span>Deployment=Pod 的管理员（副本/自愈/滚动更新）；livenessProbe（失败→重启容器）；resources requests/limits</div>
+          <div class="row act"><span class="lbl">动手</span>k8s_deployment.yaml：replicas=2 + livenessProbe(/healthz) + resources；kubectl apply</div>
+          <div class="row acc"><span class="lbl">验收</span>双副本 Running；delete pod 后自动重建（亲眼见 K8s 存在的意义）；logs 双副本都有；能串讲"探针为何免限流"</div>
+        </div>
+      </div>
+
+    </div>
+
+    <h3 style="color:var(--blue);font-size:15px;margin:26px 0 10px;">▍第 2 周后半（Day 11-14）：测试、收尾、验收</h3>
+    <div class="nodes">
+
+      <div class="node star">
+        <div class="node-head"><span class="node-id">N15</span><span class="node-title">pytest 单测护城河</span><span class="tag star">⭐ 选做但强烈建议</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>StreamFilter/TokenBucket 单测（N9 对拍自动化）；故意改坏缓冲逻辑（keep→max_len-2）看测试能否抓出</div>
+          <div class="row acc"><span class="lbl">验收</span>pytest 全绿；"改坏→红→改回→绿"完整走一遍</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N16</span><span class="node-title">架构图 + README 骨架</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>Mermaid 架构图；README 骨架（简介+图+数据占位）；week2_report</div>
+          <div class="row acc"><span class="lbl">验收</span>图中能看到限流在路由前、过滤在封帧前；README 有 N6/N10 真实数字</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N17</span><span class="node-title">阶段一终验收</span><span class="tag check">三项全过才打 tag</span></div>
+        <div class="node-body">
+          <div class="row acc"><span class="lbl">①</span>30 并发压测：10×200 + 20×429，/stats 吻合</div>
+          <div class="row acc"><span class="lbl">②</span>openai SDK 双模式直连成功</div>
+          <div class="row acc"><span class="lbl">③</span>K8s 双副本在线 + 杀 Pod 自愈演示</div>
+          <div class="row act"><span class="lbl">通过</span>→ git tag stage-1-complete</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N18</span><span class="node-title">预习衔接（0.5 天）</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>读 vLLM README + Continuous Batching 文章，记下 3 个"看不懂的词"</div>
+          <div class="row acc"><span class="lbl">验收</span>有 3 词清单——阶段二开课从你的 3 个词讲起</div>
+        </div>
+      </div>
+
+      <div class="node">
+        <div class="node-head"><span class="node-id">N19</span><span class="node-title">第 2 周复盘</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>week2_report（Docker/K8s 坑各 ≥2 条）+ 两周总 stage_report；commit 推送</div>
+          <div class="row acc"><span class="lbl">验收</span>进度追踪表更新，阶段一全绿</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout" style="margin-top:18px;">
+      🔧 <b>环境备忘</b>：pip 容器内必须显式 <code>--index-url https://pypi.hobot.cc/simple</code>（宿主机 pip.conf 挂载不生效）；docker 命令需 <code>-u 1113987:1113987</code> + <code>DOCKER_API_VERSION=1.43</code>。
+    </div>
+  </div>
+
+  <!-- ══════════ STAGE 2 ══════════ -->
+  <div class="stage s2">
+    <div class="stage-header">
+      <div class="stage-num">02</div>
+      <h2>🧠 阶段二：攻克大模型高性能推理（Serving）核心</h2>
+      <div class="stage-week">第 3-5 周 · N20-N26</div>
+    </div>
+    <div class="stage-goal">
+      <b>核心目标</b>：回答"大模型推理为什么慢、vLLM 为什么快"。云租卡完成，<b>阶段一网关代码不动，只换上游——主线第一次合流</b>。（进入前一周细化节点）
+    </div>
+
+    <div class="callout warn">
+      ⚠️ <b>预期校准</b>："70B 塞进单张 4090"不可复现（70B AWQ 后仍需 ~40G+ &gt; 24G）。动手边界改为 <b>7B/14B 的 FP16 vs AWQ-INT4 实测</b>；70B 只做论文阅读+思想实验。GPU 预算 <b>¥200-300</b>（4090 约 ¥1.5-2.5/时 × 40-60h），用完关机。
+    </div>
+
+    <div class="nodes">
+      <div class="node">
+        <div class="node-head"><span class="node-id">N20</span><span class="node-title">vLLM 初体验：跑通即胜利</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>租 4090；pip 装 vLLM；拉 Qwen2.5-7B-Instruct；起 OpenAI 兼容服务</div>
+          <div class="row acc"><span class="lbl">验收</span>openai SDK 指向 vLLM，非流式+流式都拿到真模型回复</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N21</span><span class="node-title">裸跑基线 vs vLLM 对比</span><span class="tag key">本阶段核心数据</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>benchmark.py：transformers 裸跑单请求延迟 vs vLLM；并发 1/4/8/16/32 吞吐曲线；nvidia-smi 显存</div>
+          <div class="row acc"><span class="lbl">验收</span>数据表（延迟/吞吐/显存×场景）+ 一句结论——简历 README 核心素材</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N22</span><span class="node-title">vLLM 参数空间实验</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>扫 max-num-seqs × gpu-memory-utilization；<b>先纸上预测再实测</b>，记偏差</div>
+          <div class="row acc"><span class="lbl">验收</span>能答①utilization 拉满的 OOM 风险 ②seqs 过大吞吐反降（排队论）</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N23</span><span class="node-title">量化：FP16 vs AWQ-INT4 实测</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>Qwen2.5-7B-AWQ vs FP16：吞吐/显存/质量目测；思想实验：70B AWQ≈40G 两张 4090 怎么算？</div>
+          <div class="row acc"><span class="lbl">验收</span>三维度对比表；能答"量化的代价、何时不能量化"</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N24</span><span class="node-title">网关对接 vLLM</span><span class="tag key">主线合流点</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>call_upstream_llm 从 Mock 换 httpx 流式调 vLLM（client.stream + aiter_lines）；本机网关→云端 vLLM</div>
+          <div class="row acc"><span class="lbl">验收</span>打字机效果+内容来自真模型；敏感词过滤对真模型依然工作；<b>项目从 demo 变成真平台</b>。事后必做：关机</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N25</span><span class="node-title">Triton 认知节点（不租卡）</span></div>
+        <div class="node-body">
+          <div class="row acc"><span class="lbl">验收</span>能说"Triton 是推理服务框架，vLLM 是推理引擎，二者可组合"</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N26</span><span class="node-title">阶段二终验收</span></div>
+        <div class="node-body">
+          <div class="row acc"><span class="lbl">验收</span>N21 数据表 + N22 折线图 + N24 演示 → <code>git tag stage-2-complete</code>；报告含 GPU 花费复盘</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ STAGE 3 ══════════ -->
+  <div class="stage s3">
+    <div class="stage-header">
+      <div class="stage-num">03</div>
+      <h2>🗄️ 阶段三：掌握大模型应用工程（RAG 与数据流）</h2>
+      <div class="stage-week">第 6-8 周 · N27-N33</div>
+    </div>
+    <div class="stage-goal">
+      <b>核心目标</b>：解决企业"模型胡说八道"痛点，给平台加 RAG，<b>并证明它有效——没有评估的 RAG 在面试里一文不值</b>。（进入前一周细化）
+    </div>
+
+    <div class="callout">
+      📦 <b>选型</b>：向量库用 <b>Chroma</b>（pip 即装零运维）；编排手写为主（看清每一步）；LlamaIndex 放认知节点；Milvus 认知即可不上手。
+    </div>
+
+    <div class="nodes">
+      <div class="node">
+        <div class="node-head"><span class="node-id">N27</span><span class="node-title">Embedding 入门：50 条语料小实验</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>chromadb + sentence-transformers；50 条自制 FAQ 入库；query Top-3</div>
+          <div class="row acc"><span class="lbl">验收</span>召回符合直觉；相似/无关句对余弦对比，理解"语义近→夹角小"</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N28</span><span class="node-title">文档管道：PDF → 切片 → 嵌入 → 入库</span><span class="tag key">数据流能力落点</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>pipeline.py：pypdf 解析→清洗→切片(512/overlap 64)→嵌入→入 Chroma；按 hash 增量更新</div>
+          <div class="row acc"><span class="lbl">验收</span>新增 PDF 重跑只多该文档 chunks，总数对账正确——面试"数据怎么自动化更新"的答案</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N29</span><span class="node-title">切片策略对比</span><span class="tag key">本阶段核心数据</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>三种切片策略各建索引；20 题人工标注测 Top-1/Top-3 命中率</div>
+          <div class="row acc"><span class="lbl">验收</span>命中率对比表+结论；能答"overlap 什么时候反而引入噪声"</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N30</span><span class="node-title">RAG 链路挂上网关</span><span class="tag key">主线第二次合流</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>网关加 /v1/rag/chat：检索 Chroma→拼 prompt→转发 vLLM→流式回推，复用阶段一 SSE 管道与 StreamFilter</div>
+          <div class="row acc"><span class="lbl">验收</span>openai SDK 无缝调用；能演示"库外答不上 vs 库内带引用正确回答"</div>
+        </div>
+      </div>
+      <div class="node star">
+        <div class="node-head"><span class="node-id">N31</span><span class="node-title">RAG 效果评估</span><span class="tag star">⭐ 面试免死金牌</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>20 题评测集；检索命中率+生成忠实度；对比有/无 RAG</div>
+          <div class="row acc"><span class="lbl">验收</span>评估表；被问"怎么证明 RAG 有效"时用数据回答</div>
+        </div>
+      </div>
+      <div class="node star">
+        <div class="node-head"><span class="node-id">N32</span><span class="node-title">LlamaIndex 认知节点</span><span class="tag star">⭐</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>用 LlamaIndex 重搭 N30 链路（50 行内）对比手写代码量</div>
+          <div class="row acc"><span class="lbl">验收</span>能说清"框架帮做了什么、藏了什么"——出问题仍需手写功底排障</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N33</span><span class="node-title">阶段三终验收</span></div>
+        <div class="node-body">
+          <div class="row acc"><span class="lbl">验收</span>N29 命中率表 + N30 演示 → <code>git tag stage-3-complete</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ STAGE 4 ══════════ -->
+  <div class="stage s4">
+    <div class="stage-header">
+      <div class="stage-num">04</div>
+      <h2>⚡ 阶段四：分布式计算、监控与平台化</h2>
+      <div class="stage-week">第 9-12 周 · N34-N41</div>
+    </div>
+    <div class="stage-goal">
+      <b>核心目标</b>：把前三阶段产出<b>组装</b>成生产级平台，从"能跑"到"能被运维"。K8s 深度内容在此展开（阶段一只到会用）。（进入前一周细化）
+    </div>
+
+    <div class="nodes">
+      <div class="node">
+        <div class="node-head"><span class="node-id">N34</span><span class="node-title">K8s 平台化：ConfigMap + 滚动更新</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>敏感词表抽到 ConfigMap；镜像 v1→v2 滚动更新演示</div>
+          <div class="row acc"><span class="lbl">验收</span>压测中滚动更新全程无 5xx；能答"ConfigMap 改了进程怎么感知"→改网关支持热重载</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N35</span><span class="node-title">K8s：HPA 弹性伸缩</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>HPA（CPU 70%，min2 max6）；压测触发扩容；kubectl get hpa -w</div>
+          <div class="row acc"><span class="lbl">验收</span>副本自动升降；认知：LLM 服务扩容为何特殊（权重加载慢→冷启动分钟级→扩容赶不上流量）</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N36</span><span class="node-title">Prometheus + Grafana 监控体系</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>prometheus_client 暴露 /metrics（TTFT/TPOT/请求数/429/活跃流数）；Prometheus 抓取；Grafana 自建 dashboard（不满足 import 模板）</div>
+          <div class="row acc"><span class="lbl">验收</span>压测时 TTFT P50/P99、429 曲线实时变化；能指着曲线讲"异常意味着什么、告警给谁"。⭐告警：TTFT P99 超阈值 5 分钟→飞书 webhook</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N37</span><span class="node-title">Ray 认知节点（轻量）</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>本地无 GPU 跑 @ray.remote 最小示例；读 Ray Serve 架构，画"Ray Serve + vLLM"组合图</div>
+          <div class="row acc"><span class="lbl">验收</span>能说清 Ray 解决什么、和 FastAPI 网关的分工边界。定位：深水区性价比不高，认知级即可</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--orange);font-size:15px;margin:26px 0 10px;">▍毕业项目：组装端到端平台（N38-N41）</h3>
+    <div class="arch">最终形态：
+Client ──POST──▶ [ FastAPI 网关：限流 / 敏感词过滤 / RAG 路由 / 埋点 ] ──▶ [ vLLM @云端4090 ]
+                        │
+                        ├── K8s 部署（Deployment + HPA + ConfigMap）
+                        └── Prometheus 抓取 → Grafana 看板</div>
+    <div class="nodes">
+      <div class="node">
+        <div class="node-head"><span class="node-id">N38</span><span class="node-title">部署编排</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>一键拉起全链路（网关多副本 + Prometheus + Grafana），README 写清启动步骤</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N39</span><span class="node-title">压测报告</span><span class="tag key">简历数据最终来源</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>全链路 30 并发：TTFT P50/P99、吞吐、429 行为、HPA 记录</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N40</span><span class="node-title">故障演练</span><span class="tag key">面试黄金素材</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>①杀 Pod 看自愈 ②断网关→vLLM 链路看降级 ③滚动更新中压测看零 downtime；每次记"现象→定位→结论"</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="node-head"><span class="node-id">N41</span><span class="node-title">README 终稿 + 答辩自查</span></div>
+        <div class="node-body">
+          <div class="row act"><span class="lbl">动手</span>对架构图 10 分钟讲完系统；预设 20 个面试追问自问自答</div>
+          <div class="row acc"><span class="lbl">验收</span><code>git tag graduation</code>；repo 首页：架构图+性能数据+故障演练+演示录屏</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ INTERVIEW ══════════ -->
+  <div class="stage" style="margin-top:50px;">
+    <div class="stage-header">
+      <div class="stage-num">💡</div>
+      <h2 style="color:var(--pink);">给学历破局者的求职建议</h2>
+    </div>
+    <div class="qa-grid">
+      <div class="qa">
+        <div class="q">GitHub 是你的新学历</div>
+        <div class="a">四阶段拼成<b>一个端到端平台 repo</b>：架构图 + 性能数据（N39）+ 故障演练记录，挂简历最显眼处。</div>
+      </div>
+      <div class="qa">
+        <div class="q">话术转型</div>
+        <div class="a">不说"增删改查的 Python 开发"，说 <b>"高并发 AI 推理架构优化与大模型工程化落地"</b>——有数据有平台支撑。</div>
+      </div>
+      <div class="qa">
+        <div class="q">避开算法卷工程</div>
+        <div class="a">数学问题大方承认偏工程，主动引导面试官问下面这些<b>你亲手做过的节点</b>：</div>
+      </div>
+      <div class="qa">
+        <div class="q">面试官追问 → 你的节点</div>
+        <div class="a">
+          多并发显存 OOM → <b>N22/N23</b> ｜ 流式敏感词不漏 → <b>N9</b><br>
+          RAG 怎么证明有效 → <b>N31</b> ｜ 滚动更新零 downtime → <b>N40</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ PROGRESS ══════════ -->
+  <div class="progress-wrap">
+    <div class="stage-header"><div class="stage-num">📎</div><h2 style="font-size:20px;color:var(--muted);">节点进度追踪表</h2></div>
+    <table class="progress">
+      <thead><tr><th style="width:60px;">阶段</th><th>节点</th><th style="width:120px;">状态</th><th style="width:110px;">完成日期</th><th>备注</th></tr></thead>
+      <tbody id="tbody">
+        <tr><td>一</td><td><span class="node-chip">N1</span>环境+调试器</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N2</span>事件循环心智模型</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N3</span>同步vs异步体感</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N4</span>FastAPI Hello</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N5</span>最简流式</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N6</span>SSE+TTFT</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N7</span>Pydantic+OpenAI协议</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N8</span>流式总装</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N9</span>跨块过滤</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N10</span>令牌桶+压测</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N11</span>周复盘</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N12</span>Docker</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N13</span>Pod</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N14</span>Deployment+探针</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N15</span>⭐pytest</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N16</span>架构图+README</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N17</span>终验收</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N18</span>预习衔接</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>一</td><td><span class="node-chip">N19</span>周复盘</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>二</td><td><span class="node-chip">N20-N26</span>Serving 七节点</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>三</td><td><span class="node-chip">N27-N33</span>RAG 七节点</td><td class="st">☐</td><td></td><td></td></tr>
+        <tr><td>四</td><td><span class="node-chip">N34-N41</span>平台化八节点</td><td class="st">☐</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;color:var(--muted);font-size:12px;">提示：状态列可直接在 HTML 源码里把 ☐ 改成 ✅ 并填日期；每完成一个节点同步更新 study.md 的复选框。</div>
+  </div>
+
+  <div class="footer">MLOps Transition Roadmap · 41 nodes · generated from study.md · 2026-09-10</div>
+</div>
+
+</body>
+</html>
