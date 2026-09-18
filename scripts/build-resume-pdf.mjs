@@ -391,11 +391,16 @@ section('项目')
 C.PROJECTS.forEach((p, i) => {
   if (i) doc.y += GAP.entryBefore
   need(110)
-  entryHead(
-    dash(p.period),
-    zh(p.title),
-    zh(p.orgShort) === '开源项目' ? '独立开发' : zh(id.role)
-  )
+  // 项目抬头右侧的岗位：跟着所在公司走，不跟着当前抬头走 ——
+  // 电诈项目在集侦云期间做，岗位是数据分析师；
+  // 开源项目没有公司岗位，写独立开发。
+  const roleOf = (p) =>
+    zh(p.orgShort) === '开源项目'
+      ? '独立开发'
+      : zh(p.orgShort) === '集侦云'
+        ? '数据分析师'
+        : zh(id.role)
+  entryHead(dash(p.period), zh(p.title), roleOf(p))
 
   /*
     ── 三块结构 ──
