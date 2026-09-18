@@ -4,7 +4,7 @@
 //  所有面向用户的字符串都是 { zh: '中文', en: 'English' }。
 //  改这里 → 全站生效，不用碰组件代码。
 //
-//  内容来自你的简历 + real-time-valuation 仓库。
+//  内容来自你的简历。
 //  标了 ⚠️TODO 的是我无法确认、需要你补的地方。
 // ─────────────────────────────────────────────────────────────
 
@@ -43,8 +43,8 @@ export const IDENTITY: Identity = {
     en: 'Data Loops · Data Toolchains · AI Applications',
   },
   tagline: {
-    zh: '七年数据一线。把杂乱的原始数据变成能支撑判断的东西 —— 自动驾驶的动态感知数据闭环，也包括电诈案件里的资金链条。现在用 AI 把这套方法做成能装、能跑、能验证的工具。',
-    en: 'Seven years on the data front line. I turn messy raw data into something that supports a decision — the dynamic-perception data loop for autonomous driving, and the money trails inside fraud cases. Now I use AI to turn that method into tools you can install, run, and verify.',
+    zh: '七年数据一线。把杂乱的原始数据变成能支撑判断的东西 —— 自动驾驶的动态感知数据闭环，也包括电诈案件里的资金链条。',
+    en: 'Seven years on the data front line. I turn messy raw data into something that supports a decision — the dynamic-perception data loop for autonomous driving, and the money trails inside fraud cases.',
   },
   callsign: { zh: '赫卫东', en: 'HE WEIDONG' },
   // ⚠️ 每年记得 +1。PDF 简历的抬头读它（`npm run pdf`），
@@ -182,11 +182,11 @@ export const METRICS: { value: string; label: L; detail: L }[] = [
     },
   },
   {
-    value: '0→1',
-    label: { zh: '独立产品上线', en: 'Product shipped solo' },
+    value: '10w+',
+    label: { zh: '锥桶专题周期供给', en: 'Cones supplied per cycle' },
     detail: {
-      zh: '基攻宝：产品设计、架构、编码、部署、运维，一个人四万行代码做到上线并持续迭代。现在用 AI 把这套方法做成能装、能跑、能验证的工具。',
-      en: 'Ji-Gong-Bao: product design, architecture, code, deployment and operations — 40K lines shipped solo and still iterating. Now I use AI to turn that method into tools you can install, run, and verify.',
+      zh: '锥桶数据链路以 DAG 编排、多模型协同，每个计划周期稳定满足 10w+ 的数据需求 —— 前面专题沉淀的「配置化接入」在差异极大的场景上再次得到验证。',
+      en: 'The cone data pipeline — DAG-orchestrated, multi-model — steadily meets a 10w+ items demand per planning cycle, validating the configuration-driven onboarding built up in earlier programs on wildly different scenes.',
     },
   },
 ]
@@ -200,14 +200,14 @@ export const TIMELINE: TimelineEntry[] = [
     org: { zh: '北京地平线机器人技术研发有限公司', en: 'Horizon Robotics' },
     orgShort: { zh: '地平线机器人', en: 'Horizon' },
     brief: { zh: '数据开发 · 动态感知', en: 'Data Eng · Perception' },
-    role: { zh: '数据开发工程师 · 动态感知数据闭环', en: 'Data Engineer · Dynamic-Perception Data Loop' },
+    role: { zh: '数据开发工程师', en: 'Data Engineer' },
     summary: {
       zh: '主导自动驾驶动态感知的数据基础设施建设，覆盖标签体系、场景检索与训练前数据打包，将割裂环节重构为自运转流水线，使数据供给从人力排期解耦为按需配置。',
       en: 'Led data-infrastructure construction for dynamic perception in autonomous driving — covering the tag system, scenario retrieval and pre-training data packaging — restructuring siloed stages into a self-running pipeline that decoupled data supply from headcount scheduling.',
     },
     points: {
       zh: [
-        '场景标签体系 —— 参与设计动静态障碍物场景库标签树, 设计filter规则，开发并维护自动 tagger 代码，通过定期质检统筹保障标签跨专题、跨批次的一致性',
+        '场景标签体系 —— 参与设计动静态障碍物场景库标签树, 设计filter规则，开发并维护自动 tagger 代码',
         '长尾专题攻坚 —— 主导小动物检测专题，设计三级漏斗（规则粗筛 → 大模型语义精提 → 规则化人审），以递进式成本分配替代全量标注，方法论此后被复用于其他专题',
         '训练数据生产 —— 负责训练前的数据生产环节，将挖掘、标注、真值环节的产出整合为标准格式训练集，支撑模型迭代的数据供给',
         '全链路打通 —— 多个环节接入同一流水线，新专题接入由重写代码降级为修改配置',
@@ -229,7 +229,7 @@ export const TIMELINE: TimelineEntry[] = [
     org: { zh: '北京集侦云科技有限责任公司', en: 'Jizhenyun Technology' },
     orgShort: { zh: '集侦云', en: 'Jizhenyun' },
     brief: { zh: '数据分析 · 刑侦建模', en: 'Analyst · Investigation' },
-    role: { zh: '数据分析师 · 刑侦数据建模', en: 'Data Analyst · Criminal-Investigation Modeling' },
+    role: { zh: '数据分析师', en: 'Data Analyst' },
     summary: {
       zh: '面向刑侦实战的数据治理与关系建模，在数十张异构账表中还原跨境电诈的资金拆分路径，输出可直接落地侦查的结论。',
       en: 'Data governance and relationship modeling for frontline criminal investigation — reconstructing cross-border fraud fund-splitting paths from dozens of heterogeneous ledgers into conclusions investigators could act on directly.',
@@ -262,7 +262,7 @@ export const PROJECTS: Project[] = [
     // ⚠️ 以 PDF 简历为准（2021.3-2021.6）。「2019 — 2021」是在集侦云的
     // 整段任期，不是这个案子的周期。
     period: { zh: '2021.03 — 2021.06', en: 'Mar 2021 — Jun 2021' },
-    org: { zh: '集侦云 · 联合河北省刑侦大队', en: 'Jizhenyun · with a provincial criminal investigation unit' },
+    org: { zh: '集侦云', en: 'Jizhenyun' },
     orgShort: { zh: '集侦云', en: 'Jizhenyun' },
     kind: 'internal',
     tagline: {
@@ -314,7 +314,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: 'dynamic-data-loop',
-    no: '01',
+    no: '02',
     title: { zh: '动态感知数据闭环', en: 'Dynamic-Perception Data Loop' },
     // ⚠️ 以 PDF 简历为准（2024.3-2024.10）。「2021 — 2024」是把整段
     // 在地平线的时间当成了这个项目的时间，两回事。
@@ -343,7 +343,6 @@ export const PROJECTS: Project[] = [
             '公司级标签树按来源分为项目标签、标签库、地理场景、采集标签、路测标签等若干子树，各来源标签统一挂载在时间线标签体系上、可跨来源组合检索；我负责其中动态障碍物场景库的标签树设计 —— 围绕目标类型、动静态属性、运动状态等维度，将「何种路况构成同一类场景」的判断标准化为层级化的可执行规范',
             '负责开发并长期维护动态障碍物方向下的自动 tagger：基于路采数据回传信号中的结构化字段（工况、位姿、目标框等）实现标签的规则化批量推断与挂载，标签回写标签树数据库、与工况环境等其他来源标签形成关联',
             '前端检索：用户通过 web 端组合标签条件、点选提供的按钮，或直接编写 SQL 完成数据获取；我主导为检索提供数据支撑并完成各类场景的检索测试 —— 高频组合与长尾边界组合逐类验证结果的准确性与召回边界，确保检索结果可被算法团队直接使用',
-            '对各类标签的增量数据执行定期质检（抽样复核、跨批次一致性比对），保障标签在不同专题、不同时间批次间的一致性与准确性',
           ],
           en: [
             'The company-level tag tree is organized by source into several subtrees — project tags, the tag library, GeoHub scene tags, collection tags and road-test tags — all mounted on one timeline-tag system and jointly queryable across sources; I owned the tag-tree design for the dynamic-obstacle scene library, formalizing "what constitutes one class of road situation" around target class, static/dynamic attribute and motion state into a hierarchical executable specification',
@@ -423,7 +422,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: 'animal-detection',
-    no: '02',
+    no: '03',
     title: { zh: '小动物目标检测专题', en: 'Small-Animal Detection Program' },
     // ⚠️ 以 PDF 简历为准。曾经写成「2023 — 2024」，和实际起止对不上。
     period: { zh: '2024.05 — 2024.10', en: 'May 2024 — Oct 2024' },
@@ -501,7 +500,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: 'cone-mining',
-    no: '03',
+    no: '04',
     title: { zh: '锥桶数据挖掘', en: 'Traffic-Cone Data Mining' },
     period: { zh: '2025.08 — 2026.01', en: 'Aug 2025 — Jan 2026' },
     org: { zh: '地平线机器人', en: 'Horizon Robotics' },
@@ -545,12 +544,10 @@ export const PROJECTS: Project[] = [
           zh: [
             '多模型分工 —— 接入 Qwen-VL、SAM3、YOLOv8 等开源模型并按能力分层：视觉语言模型做场景级语义判断（是否施工区、排布类型、语义描述），检测模型做实例级定位与计数，分割模型补轮廓与掩膜精度',
             '提示词工程与参数固化 —— 对提示词逐项做对照测试：同一场景以不同表述提问、比较判分稳定性，把稳定复现的提示词与参数组合沉淀为 config，使挖掘结果可复现、可交接，而不依赖调参时的手感；也使「换模型升级」变成改配置而非改代码',
-            '结果复核 —— 模型判定与规则条件联合打分，边界样本（置信度落在灰区的帧）单独归档，人工复核结论回填后作为后续阈值调整的依据',
           ],
           en: [
             'Model division of labor — Qwen-VL, SAM3, YOLOv8 and other open-source models wired in with layered roles: the vision-language model judges scene-level semantics (construction zone or not, layout type, semantic description), detection models handle instance-level localization and counting, segmentation models supply contour and mask precision',
             'Prompt engineering and frozen parameters — prompts tested pairwise: the same scene queried with different phrasings, comparing score stability; reproducible prompt-parameter combinations are codified into config, making results reproducible and transferable rather than dependent on tuning intuition, and turning model upgrades into a configuration change instead of a code change',
-            'Result adjudication — model verdicts and rule conditions jointly scored, with boundary samples (frames whose confidence falls in the gray zone) archived separately; human-review conclusions are filled back in as the basis for later threshold adjustment',
           ],
         },
       },
@@ -580,7 +577,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: 'agent-skill-service',
-    no: '04',
+    no: '05',
     title: { zh: 'Agent Skill 知识服务化', en: 'Agent Skill as a Service' },
     period: { zh: '2026.06 — 2026.09', en: 'Jun 2026 — Sep 2026' },
     org: { zh: '地平线机器人', en: 'Horizon Robotics' },
@@ -641,63 +638,6 @@ export const PROJECTS: Project[] = [
     ],
     featured: true,
   },
-  {
-    id: 'ji-gong-bao',
-    no: '01',
-    title: { zh: '基攻宝 · 基金实时估值系统', en: 'Ji-Gong-Bao · Real-Time Fund Valuation' },
-    period: { zh: '2026.03 — 2026.06', en: 'Mar 2026 — Jun 2026' },
-    org: { zh: '独立开发 · 开源', en: 'Independent · Open Source' },
-    orgShort: { zh: '开源项目', en: 'Open Source' },
-    kind: 'oss',
-    tagline: {
-      zh: '以 AI 协作为核心工作方式，独立完成从产品设计到运维的完整产品交付，验证数据工程师用 AI 独立开发全栈产品的可行性',
-      en: 'AI collaboration as the core working method, delivering a complete product from design through operations solo — probing how far a data engineer can go building full-stack products with AI',
-    },
-    sections: [
-      {
-        id: 'context',
-        label: { zh: '背景', en: 'Context' },
-        body: {
-          zh: '场内基金实时估值分散在多个公开接口之后，格式各异、可用性不稳；持仓计算涉及 T+N 申赎、跨日结算、分红再投等相互耦合的金融规则，而既有工具或要求托管持仓数据、或计算过程完全不透明。选这个题目做独立开发，一方面是真实需求，另一方面它恰好覆盖前端、金融计算、质量工程——是一块足够复杂的试金石，可以系统性地验证「AI 协作开发」这条工作方式的边界。',
-          en: 'Real-time fund valuations sit behind a spread of public endpoints with inconsistent formats and availability; portfolio computation involves tightly coupled financial rules — T+N confirmation, cross-day settlement, dividend reinvestment — while existing tools either demand custody of holdings or expose no auditable computation path. The topic was chosen for two reasons: it is a real need, and its breadth — front end, financial computation, quality engineering — makes it a demanding testbed for systematically probing the boundary of AI-collaborative development.',
-        },
-      },
-      {
-        id: 'ai',
-        label: { zh: 'AI 协作开发', en: 'AI Collaboration' },
-        points: {
-          zh: [
-            'AI 驱动的全栈学习 —— 前端框架、PWA、金融计算规则均非既有积累，以 AI 协作边学边做：先让 AI 讲透原理与选型依据，再落到代码验证，学习成本从「翻文档数周」压缩为「按天计的迭代」',
-            '复杂逻辑的 AI 辅助设计 —— T+N 申赎、分红再投、净值重校准存在计算顺序依赖，把业务规则显式讲给 AI、由 AI 辅助推导状态机结构，再以实际数据回归验证——AI 负责扩展设计空间，人对正确性负最终责任',
-            '质量兜底的 AI 时代做法 —— 在无同行评审的独立开发中，让 AI 生成功能域回归用例、人工审校边界条件后接入 pre-commit 钩子，构造出独立开发也可信的质量底线',
-          ],
-          en: [
-            'AI-driven full-stack learning — front-end frameworks, PWA and financial-computation rules were all new territory; the loop was learn-from-AI-then-verify-in-code, compressing the learning cost from weeks of documentation reading to iteration measured in days',
-            'AI-assisted design of complex logic — T+N confirmation, dividend reinvestment and NAV recalibration carry ordering dependencies; business rules were spelled out to the AI, which helped derive the state-machine structure, then validated against real data — AI expands the design space, while correctness remains a human liability',
-            'Quality backstop in the AI era — without peer review, AI generated functional-domain regression cases, humans audited the boundary conditions, and the result was wired into a pre-commit hook: a trustworthy quality floor even for solo development',
-          ],
-        },
-      },
-      {
-        id: 'outcome',
-        label: { zh: '成果', en: 'Outcome' },
-        metrics: [
-          { value: '已上线', label: { zh: '开源 · 在线体验可用', en: 'Open source · live demo' } },
-          { value: 'v3.0', label: { zh: '持续重构迭代', en: 'Refactored and iterating' } },
-        ],
-        body: {
-          zh: '系统已上线并迭代至 v3.0，源码与在线体验公开。项目验证的核心命题是：以 AI 协作为工作方式，一名数据工程师可以把非既有领域的复杂产品独立做到可上线、可维护、可验证——学习能力不再受既有技术栈限制，而取决于把问题拆解清楚并驱动 AI 的能力。',
-          en: 'The system is live through v3.0 with source and demo public. The proposition it validated: with AI collaboration as the working method, a data engineer can take a complex product outside their existing stack solo to shipped, maintainable and verifiable — learning capacity is no longer bounded by one’s current stack, but by the ability to decompose problems clearly and drive the AI.',
-        },
-      },
-    ],
-    stack: ['Vue 3', 'TypeScript', { zh: 'AI 协作开发', en: 'AI Collaboration' }, 'Vitest', 'PWA'],
-    links: [
-      { label: { zh: '在线体验', en: 'Live demo' }, href: 'https://L-newbie.github.io/real-time-valuation/' },
-      { label: { zh: '源码', en: 'Source' }, href: 'https://github.com/L-newbie/real-time-valuation' },
-    ],
-    featured: true,
-  },
 ]
 
 // ── 06 能力矩阵 ────────────────────────────────────────────
@@ -718,8 +658,8 @@ export const SKILLS: SkillGroup[] = [
         key: true,
         note: { zh: '需求拆解 → 部署全流程', en: 'Requirements through deployment' },
         detail: {
-          zh: '同一件事做第二遍就该沉淀成工具 —— 这个习惯让我一个人四万行代码把产品做到上线并迭代至 v3.0。AI 不是补全器，是把「我知道怎么做」变成「另一个人也能直接跑」的杠杆。',
-          en: 'Anything done twice should become a tool — that habit is why I shipped a 40K-line product solo and iterated it through v3.0. AI is not autocomplete; it is the lever that turns "I know how" into "someone else can run it".',
+          zh: '同一件事做第二遍就该沉淀成工具。AI 不是补全器，是把「我知道怎么做」变成「另一个人也能直接跑」的杠杆 —— 复杂业务规则讲给 AI 推导结构，正确性由数据和回归兜底。',
+          en: 'Anything done twice should become a tool. AI is not autocomplete; it is the lever that turns "I know how" into "someone else can run it" — spell the business rules out, let the AI derive the structure, and hold correctness with data and regression.',
         },
       },
       {
