@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>--</title>
+<style>
+  /* ────────────────────────────────
+     口述稿排版原则：
+     · 每个板块一个「页」——面试时按 ←/→ 或点击侧栏切换，
+       一页讲一个主题，不互相干扰。
+     · 层级：口述主线（条目化，每条带关键词标签，直接照着说）
+       → 分层细节（编号小节），一切内容都是准备给自己讲的提词。
+     · 一切长段落都拆成条目：扫标签即可定位，不用逐字读。
+     · 口述句用「」标出可直接念的整段话；其余是提词，不用逐字背。
+     ──────────────────────────────── */
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #24292f;
+    --dim: #57606a;
+    --faint: #8b949e;
+    --accent: #0969da;
+    --accent-soft: rgba(9, 105, 218, 0.08);
+    --warn: #b45309;
+    --ok: #1a7f37;
+    --line: #d8dee4;
+    --mono: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    overflow: hidden; /* 分页接管滚动 */
+  }
+
+  /* ── 布局：左侧固定目录 + 右侧页面 ── */
+  .app { display: flex; height: 100vh; }
+  nav.toc {
+    width: 218px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 22px 0 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: width .18s ease;
+    overflow: hidden;
+    position: relative;
+  }
+  /* 收起态：变窄条，只显示编号 */
+  nav.toc.collapsed { width: 44px; }
+  nav.toc.collapsed .toc-title,
+  nav.toc.collapsed .toc-foot,
+  nav.toc.collapsed button:not(.toc-toggle) { display: none; }
+  nav.toc.collapsed .toc-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 8px;
+  }
+  nav.toc.collapsed .toc-strip button {
+    all: unset;
+    display: block;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    text-align: center;
+    line-height: 28px;
+    cursor: pointer;
+  }
+  nav.toc.collapsed .toc-strip button:hover { color: var(--ink); background: var(--accent-soft); }
+  nav.toc.collapsed .toc-strip button.active { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+  .toc-strip { display: none; }
+  /* 收起/展开切换按钮：固定在侧栏右上 */
+  .toc-toggle {
+    all: unset;
+    position: absolute;
+    top: 10px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    color: var(--faint);
+    font-size: 14px;
+    text-align: center;
+    line-height: 24px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 2;
+  }
+  .toc-toggle:hover { color: var(--accent); background: var(--accent-soft); }
+  nav.toc .toc-title {
+    padding: 0 34px 14px 20px;
+    font-size: 12px;
+    letter-spacing: .18em;
+    color: var(--faint);
+    font-weight: 600;
+  }
+  nav.toc button {
+    all: unset;
+    display: block;
+    width: 100%;
+    padding: 8px 20px;
+    color: var(--dim);
+    font-size: 13.5px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  nav.toc button:hover { color: var(--ink); }
+  nav.toc button.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  nav.toc button .no { margin-right: 8px; color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  nav.toc button.active .no { color: var(--accent); }
+  nav.toc .toc-foot {
+    margin-top: auto;
+    padding: 14px 20px 0;
+    font-size: 12px;
+    color: var(--faint);
+    border-top: 1px solid var(--line);
+    line-height: 1.9;
+  }
+
+  main { flex: 1; position: relative; overflow: hidden; }
+  .page {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 44px 56px 80px;
+    display: none;
+  }
+  .page.active { display: block; }
+
+  /* ── 页头 ── */
+  .page-head { margin-bottom: 28px; }
+  .page-head .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .22em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .page-head h1 { font-size: 26px; font-weight: 700; letter-spacing: .02em; }
+  .page-head .sub { color: var(--dim); font-size: 14px; margin-top: 6px; }
+  .page-head .time-cost {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--warn);
+    background: rgba(180, 83, 9, .07);
+    border: 1px solid rgba(180, 83, 9, .3);
+    border-radius: 99px;
+    padding: 2px 12px;
+  }
+
+  /* ── 层级 1：口述主线（条目化，每条 = 关键词标签 + 可照念的话） ── */
+  .script {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 22px;
+    font-size: 16px;
+  }
+  .script .tag {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .2em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .script .cue {
+    color: var(--dim);
+    font-size: 13.5px;
+    display: block;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  /* 条目化口述列表：数字徽标 + 关键词标签 */
+  ol.say {
+    list-style: none;
+    counter-reset: say;
+  }
+  ol.say > li {
+    counter-increment: say;
+    position: relative;
+    padding-left: 34px;
+    font-size: 15.5px;
+  }
+  ol.say > li::before {
+    content: counter(say);
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: 700 12px/22px var(--mono);
+    text-align: center;
+  }
+  ol.say > li + li { margin-top: 13px; }
+  ol.say > li .k {
+    display: inline-block;
+    font-weight: 700;
+    color: var(--accent);
+    margin-right: 6px;
+    font-size: 14px;
+  }
+  ol.say > li > .k::after { content: ' ｜ '; color: var(--faint); font-weight: 400; }
+
+  /* ── 层级 2：分节细节 ── */
+  h2.sec {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 17px;
+    margin: 30px 0 12px;
+  }
+  h2.sec .n { font-family: var(--mono); color: var(--accent); font-size: 13px; }
+  h3.sub {
+    font-size: 15px;
+    color: var(--ink);
+    margin: 20px 0 8px;
+    padding-left: 12px;
+    border-left: 3px solid var(--line);
+  }
+  h3.sub .hint { color: var(--faint); font-weight: 400; font-size: 12.5px; margin-left: 8px; }
+
+  ul.pts { list-style: none; margin: 8px 0 4px; }
+  ul.pts > li {
+    padding: 7px 0 7px 20px;
+    position: relative;
+    color: var(--ink);
+  }
+  ul.pts > li::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 17px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: .8;
+  }
+  ul.pts > li .b { font-weight: 600; }
+  ul.pts > li .d { color: var(--dim); }
+  ul.pts ul { margin: 6px 0 2px; }
+  ul.pts ul li {
+    list-style: none;
+    padding: 3px 0 3px 18px;
+    position: relative;
+    color: var(--dim);
+    font-size: 14px;
+  }
+  ul.pts ul li::before {
+    content: '·';
+    position: absolute;
+    left: 6px;
+    color: var(--faint);
+  }
+
+  /* 关键数字卡片 */
+  .figures { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0 20px; }
+  .fig {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 18px;
+    min-width: 128px;
+  }
+  .fig .v { font-size: 22px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .fig .l { font-size: 12px; color: var(--dim); margin-top: 2px; }
+
+  /* 链路/漏斗示意 */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0 16px;
+    font-size: 13.5px;
+  }
+  .flow .node {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--ink);
+  }
+  .flow .node small { display: block; color: var(--faint); font-size: 11.5px; }
+  .flow .arr { color: var(--accent); font-family: var(--mono); }
+
+  .tip {
+    border-left: 3px solid var(--ok);
+    background: rgba(26, 127, 55, .06);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 16px;
+    margin: 12px 0;
+    color: var(--dim);
+    font-size: 13.5px;
+  }
+  .tip b { color: var(--ok); }
+
+  /* 代码块：算法题专用 */
+  .code pre {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 10px 0;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: #1f2328;
+    tab-size: 4;
+  }
+
+  /* 代码块一键复制按钮：悬浮在代码块右上角 */
+  .copy-btn {
+    all: unset;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--dim);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+    z-index: 2;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .copy-btn.done { color: var(--ok); border-color: var(--ok); background: rgba(26, 127, 55, .08); }
+  .code { position: relative; }
+
+  /* 算法页顶部索引 */
+  nav.algo-toc {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 20px 18px;
+    margin: 0 0 26px;
+  }
+  nav.algo-toc .algo-toc-title {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .2em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .algo-toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
+    align-items: start;
+  }
+  /* 可展开索引卡片：卡片头 + 函数名下拉 */
+  .algo-card {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+    overflow: hidden;
+    transition: border-color .15s;
+  }
+  .algo-card:hover { border-color: var(--accent); }
+  .algo-card.open { border-color: var(--accent); }
+  .algo-card .card-head {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 8px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .algo-card .card-head .t {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .algo-card .card-head .t .chev {
+    color: var(--faint);
+    font-size: 11px;
+    transition: transform .18s;
+  }
+  .algo-card.open .card-head .t .chev { transform: rotate(90deg); color: var(--accent); }
+  .algo-card .card-head .sub {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--faint);
+  }
+  .algo-card .card-body {
+    display: none;
+    border-top: 1px dashed var(--line);
+    background: #fbfcfd;
+    padding: 6px 14px 9px;
+  }
+  .algo-card.open .card-body { display: block; }
+  .algo-card .card-body a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0 3px 12px;
+    position: relative;
+    text-decoration: none;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .algo-card .card-body a::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 10px;
+  }
+  .algo-card .card-body a:hover { color: var(--accent); }
+  /* 函数名右侧的中文名 */
+  .algo-card .card-body a b {
+    flex: none;
+    font-family: var(--sans, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .algo-card .card-body a:hover b { color: var(--accent); }
+  .algo-card .card-body .jump {
+    display: block;
+    margin-top: 5px;
+    border: none;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .algo-card .card-body .jump:hover { background: var(--accent); color: #ffffff; }
+  /* 回到顶部：固定定位，仅算法页显示、滚动后出现 */
+  .back-top {
+    position: fixed;
+    right: 18px;
+    bottom: 48px;
+    display: none;
+    align-items: center;
+    cursor: pointer;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 15px 8px 12px;
+    border-radius: 99px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(9, 105, 218, .35);
+    opacity: .92;
+    transition: opacity .15s;
+    z-index: 10;
+  }
+  .back-top.show { display: inline-flex; }
+  .back-top:hover { opacity: 1; }
+  .back-top::before { content: '↑ '; font-weight: 700; }
+  /* 跳转锚点：避开固定页头不留白 */
+  .algo-sec { scroll-margin-top: 16px; }
+  .code pre[id] { scroll-margin-top: 16px; }
+
+
+  /* 键盘提示 */
+  .kbd-hint {
+    position: fixed;
+    right: 18px;
+    bottom: 14px;
+    color: var(--dim);
+    font-size: 12px;
+    font-family: var(--mono);
+    background: rgba(246, 247, 249, .92);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    pointer-events: none;
+  }
+  .pgno {
+    position: fixed;
+    right: 18px;
+    top: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  /* ── 手机端顶部翻页栏（替代被隐藏的侧栏） ── */
+  .mobile-bar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    z-index: 20;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .mobile-bar button {
+    all: unset;
+    width: 36px;
+    height: 34px;
+    text-align: center;
+    line-height: 34px;
+    border-radius: 8px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .mobile-bar button:disabled {
+    color: var(--faint);
+    background: var(--bg);
+    cursor: default;
+  }
+  .mobile-bar select {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    padding: 0 8px;
+  }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    .mobile-bar { display: flex; }
+    .kbd-hint { display: none; }
+    .pgno { top: 62px; }
+    .page { padding: 68px 20px 70px; }
+  }
+</style>
+</head>
+<body>
+<!-- 手机端翻页栏：桌面隐藏，窄屏显示 -->
+<div class="mobile-bar" id="mobileBar">
+  <button id="mPrev" aria-label="上一页">‹</button>
+  <select id="mSel" aria-label="跳转到页面"></select>
+  <button id="mNext" aria-label="下一页">›</button>
+</div>
+<div class="app">
+<nav class="toc" id="toc">
+  <button class="toc-toggle" id="tocToggle" title="收起目录">⟨</button>
+  <div class="toc-title">口述稿 · 目录</div>
+  <!-- JS 生成 -->
+  <div class="toc-strip" id="tocStrip"></div>
+  <div class="toc-foot">← / → 翻页<br>点目录跳转<br><span style="color:#1a7f37">「大引号」内为可直接口述的段落</span></div>
+</nav>
+<main id="main">
+
+<!-- ══════════════════ 00 · 开场自我介绍 ══════════════════ -->
+<section class="page" id="p0">
+  <div class="page-head">
+    <div class="kicker">00 · OPENING</div>
+    <h1>自我介绍</h1>
+    <div class="sub">面试第一分钟 · 一段话，直接照着读</div>
+    <span class="time-cost">目标时长 约 60 秒</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 完整讲稿（第一视角，整段连读）</div>
+    <ol class="say">
+      <li><span class="k">开场 · 一段话全文</span>「面试官您好，我是赫卫东，很高兴参加今天的面试。过去七年我一直在做数据开发相关的工作：早期主要处理各类不规范的文本数据和数据库，把它们整合成可分析、可检索的结构化数据，这段经历帮我打下了数据治理的基本功。2021 年底到现在，我在地平线负责支持算法和模型迭代的数据工作，覆盖从原始数据解析、目标数据挖掘、真值数据的标注管理，到模型输入数据的结构化打包、验证及发版的完整链路，同时负责数据 DAG 云端和本地链路的工具开发，让这条链路更自动化、更可复用。以上是我的基本情况，谢谢。」</li>
+    </ol>
+    <span class="cue">⚠ 收口后停住，把话头交给面试官。不要主动展开任何项目细节——每个块被追问时都有后面几页的准备。</span>
+  </div>
+
+  <div class="tip"><b>时长控制：</b>全段约 210 字，正常面试语速下 50–60 秒。面试官示意「简单介绍一下」时，可从「2021 年底到现在」起读、砍掉早期经历那一句，压到 30 秒左右。</div>
+</section>
+
+<!-- ══════════════════ 01 · 项目 · 动态感知数据闭环 ══════════════════ -->
+<section class="page" id="p1">
+  <div class="page-head">
+    <div class="kicker">01 · PROJECT · CORE</div>
+    <h1>动态感知数据闭环</h1>
+    <div class="sub">地平线 · 2024.03–2024.10 · 最重要的项目，讲 3–4 分钟</div>
+    <span class="time-cost">面试官问「讲一个你最有代表性的项目」→ 就讲这个</span>
+  </div>
+
+  <div class="flow">
+    <div class="node">标签与检索<small>统一语义底座</small></div>
+    <span class="arr">→</span>
+    <div class="node">数据挖掘<small>批量推理筛选场景</small></div>
+    <span class="arr">→</span>
+    <div class="node">数据标注<small>预标注 + 人工 + 质检</small></div>
+    <span class="arr">→</span>
+    <div class="node">数据打包<small>LMDB 训练集出口</small></div>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>四个环节 · 逐个口述</h2>
+
+  <h3 class="sub">① 标签与检索 <span class="hint">先讲语义底座，注意讲清「公司级 → 我负责的部分」的层级</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">公司级结构</span>「整个项目从标签讲起，因为它是检索和后续所有环节的语义底座。公司的标签树按来源分成<strong>项目标签、标签库、地理场景、采集标签、路测标签</strong>等若干子树，各来源的标签统一挂载在时间线标签体系上，可以跨来源组合检索。」</li>
+      <li><span class="k">我负责的部分</span>「我负责其中<strong>动态障碍物场景库</strong>的标签树设计——围绕目标类型、动静态属性、运动状态这些维度，把『何种路况构成同一类场景』的判断标准化成层级化的可执行规范。」</li>
+      <li><span class="k">自动 tagger</span>「在规范之上，我开发并长期维护动态障碍物方向下的自动 tagger——基于路采数据回传信号里的结构化字段（工况、位姿、目标框等），实现标签的规则化批量推断与挂载；标签回写标签树数据库，和工况环境等其他来源的标签形成关联。」</li>
+      <li><span class="k">前端检索</span>「检索侧，用户在 web 端<strong>点选按钮组合标签条件</strong>，也可以<strong>直接编写 SQL</strong> 完成数据获取。这两条路径我主导提供数据支撑，并完成各类场景的检索测试——高频组合和长尾边界组合逐类验证准确性与召回边界，保证算法团队拿到的结果直接可用。」</li>
+    </ol>
+  </div>
+
+  <h3 class="sub">② 数据挖掘 <span class="hint">链路化，不是一次性脚本</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">主链路</span>「标签把数据组织起来之后，下一步是把需要的数据从海量路采里挖出来。我开发了数据挖掘链路：检测模型对路采数据执行批量推理，按工况、目标类型、置信度阈值等条件组合筛选候选场景，命中的结果沉淀为可检索的结构化数据——是链路化的持续产出，不是一次性脚本。」</li>
+      <li><span class="k">多模态补充</span>「检测模型只认『框得住的目标』，所以我引入多模态模型补充语义级挖掘——它能理解『什么场合下出现的什么目标』。两者互补，可挖掘场景的覆盖面显著扩大。」</li>
+      <li><span class="k">集群调度</span>「挖掘执行依托云端集群批量调度，推理任务按数据批次组织，支持断点续跑和结果增量合并，保障大规模路采数据下的挖掘吞吐。」</li>
+      <li><span class="k">属性随行</span>「挖掘结果在链路中携带工况、目标类型等属性信息，随数据一并进入下游标注与打包环节，支撑后续按场景筛选与统计——<strong>不依赖平台级的自动联动机制</strong>，环节衔接靠数据本身带属性。」</li>
+    </ol>
+  </div>
+
+  <h3 class="sub">③ 数据标注 <span class="hint">讲成本结构，不是流程复读</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">两级筛选</span>「挖出来的数据不直接送标，先做两级筛选：自动粗筛按模型置信度、目标密度、场景覆盖等指标对候选数据分级，把明显低价值的先过滤掉；粗筛结果再由人工二次精筛，确定最终入标范围——<strong>核心是不让标注预算平均摊派</strong>。」</li>
+      <li><span class="k">预标注</span>「执行上用预标注——检测模型的推理结果作为标注初稿，人在上面校正而不是从零绘制，降低单帧标注成本；预标注质量与人工校正量按批次统计，反向用于调整预标注模型和阈值。」</li>
+      <li><span class="k">规则文档 + 质检</span>「同时制定标注规则文档统一判定口径——目标类型边界、遮挡截断怎么处理、歧义场景怎么裁决，都写清楚；标注完成后执行质检和抽检，保障真值质量可核查。」</li>
+    </ol>
+  </div>
+
+  <h3 class="sub">④ 数据打包 <span class="hint">重点环节，多停留</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">定位</span>「打包是训练前的最后一站，也是我对这个项目最有信心的部分。」</li>
+      <li><span class="k">打包内容</span>「我负责把标注产出的真值结果打包成 <strong>LMDB 格式的训练集</strong>——内容包括标注结果、数据索引、图像数据、位置信息等，整体符合模型训练的输入结构。」</li>
+      <li><span class="k">工程化流程</span>「打包流程做了工程化：以数据批次为单位组织打包任务，支持增量打包与版本化管理——历史训练集可复现、可回溯到具体批次与切片。」</li>
+      <li><span class="k">配置化定制</span>「打包遵循既定的通用规则，在此之上按专题定制内容——样本组织方式、数据范围、版本标识——<strong>定制不侵入通用流程，新专题打包只需要调整配置</strong>。」</li>
+      <li><span class="k">内建验证</span>「打包过程还内建了数据验证：完整性校验保证样本数和真值记录一一对应，格式校验保证训练框架直接可解析，统计核对类别分布——异常批次在进训练之前就被拦截。」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">2</span>项目总结 · 口述收尾</h2>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">价值在哪</span>「这个项目的价值不在任何单点工具，而在四个环节以统一规范衔接之后，<strong>整条链路的可复用性</strong>。」</li>
+      <li><span class="k">转变</span>「数据供给从『按人力排期』变成了『按需求配置』。」</li>
+      <li><span class="k">个人意义</span>「对我个人而言，它是我真正理解『数据基础设施』的地方——杠杆从来不在某个精巧的脚本，而在于让整条链路不需要人推着走。」</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════ 03 · 项目 · 小动物检测专题 ══════════════════ -->
+<section class="page" id="p2">
+  <div class="page-head">
+    <div class="kicker">02 · PROJECT · METHODOLOGY</div>
+    <h1>小动物目标检测专题</h1>
+    <div class="sub">地平线 · 2024.05–2024.10 · 长尾方法论的最佳素材，讲 2–3 分钟</div>
+    <span class="time-cost">适合被问「你解决过最难的数据问题」时使用</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 背景 + 问题本质</div>
+    <ol class="say">
+      <li><span class="k">类别特性</span>「这个专题是个典型的长尾问题。猫狗在路面出现频率极低，但一旦漏检导致碾压、或误检触发幽灵刹车，安全后果和舆论代价都很严重——典型的『安全相关但样本极稀』。」</li>
+      <li><span class="k">难点在低频本身</span>「难点就在低频本身：海量路采数据里这类目标是稀疏信号，全量送标成本不可接受，随机抽样又几乎命中不了正样本。」</li>
+      <li><span class="k">解法定位</span>「<strong>解法不在模型侧，在数据侧：怎么在成本约束下，把稀疏正样本从海量数据里富集出来。</strong>」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>三级漏斗 · 核心口述</h2>
+  <div class="tip"><b>设计原则一句话先说：</b>「递进式成本分配——每一级的单位成本递增、精度递增，处理量递减一个数量级。让最贵的手段只作用于最小的数据量。」</div>
+  <div class="flow">
+    <div class="node">一级 · 规则粗筛<small>先验压缩数量级 · 成本≈0</small></div>
+    <span class="arr">→</span>
+    <div class="node">二级 · 模型精提<small>语义级判断 · 单帧贵但集合已小</small></div>
+    <span class="arr">→</span>
+    <div class="node">三级 · 规则化人审<small>人工终审 · 量最小 · 纯度最高</small></div>
+  </div>
+  <ul class="pts">
+    <li><span class="b">一级 · 讲「先验」并主动讲它的缺陷。</span><span class="d">「联合内部工况标签、时间窗口，加上猫狗高发区域的先验分布——住宅区周边、城市道路夜间。候选集从 PB 级压到可处理量级。成本趋近零，但代价是召回有限——先验之外的出现场景这一级会漏，需要后续迭代补先验。」<br>⚠ 主动承认缺陷：面试官听到「我知道这级会漏什么」时，对你方法论成熟度的判断会上一个台阶。</span></li>
+    <li><span class="b">二级 · 讲「从时间地点像 → 画面内容像」。</span><span class="d">「引入开源大模型对粗筛候选做语义级判断，保留真正可能包含目标的帧并给置信度。单帧成本显著高于规则，但作用在已压缩的集合上，总成本可控。」</span></li>
+    <li><span class="b">三级 · 讲「规则化」三个字。</span><span class="d">「制定明确的判定规则文档——目标可见性、遮挡比例、最小尺寸下限——然后人工终审。人只做规则内的裁决，不做主观发挥。」</span></li>
+  </ul>
+
+  <h2 class="sec"><span class="n">2</span>数据运营 · 第二层内容（追问再讲）</h2>
+  <ul class="pts">
+    <li><span class="b">漏斗阈值迭代。</span><span class="d">精提模型对不同类别判分可靠度不同——按筛选反馈统计各类误检漏检，逐类调阈值，不全局一刀切。</span></li>
+    <li><span class="b">标注规范治理。</span><span class="d">修订规则文档，明确遮挡、模糊、远距离小目标的判据，压缩标注员主观裁量空间。</span></li>
+    <li><span class="b">质量闭环。</span><span class="d">协调标注资源、全程监控质量，回流数据直接可训练，不返工。</span></li>
+    <li><span class="b">需求池建设。</span><span class="d">沉淀标准格式数据 + 覆盖不同时间跨度与场景类型的需求池，后续迭代按需取数，不从头重挖。</span></li>
+  </ul>
+
+  <h2 class="sec"><span class="n">3</span>收尾口述</h2>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">直接交付</span>「这个专题交付了可直接训练的正样本数据集，支撑检测能力迭代上线。」</li>
+      <li><span class="k">方法论沉淀</span>「但更重要的产出是固化下来的长尾方法论：<strong>稀疏目标的关键不在标注更多，而在筛选更准</strong>。」</li>
+      <li><span class="k">被复用</span>「『粗筛→模型精提→规则人审』这个结构后来被多个专题直接复用，成了团队处理低频类别的标准范式。」</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════ 04 · 项目 · 锥桶数据挖掘 ══════════════════ -->
+<section class="page" id="p3">
+  <div class="page-head">
+    <div class="kicker">03 · PROJECT · ENGINEERING</div>
+    <h1>锥桶数据挖掘</h1>
+    <div class="sub">地平线 · 2025.08–2026.01 · 展示工程化与大模型落地能力，讲 2–3 分钟</div>
+    <span class="time-cost">适合被问「怎么把大模型用进生产链路」时使用</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 背景</div>
+    <ol class="say">
+      <li><span class="k">语义</span>「锥桶承载的是施工区语义——它标记的不是一个障碍物，而是『这条车道此刻不能走』，属于漏检代价高、场景差异大的类别。」</li>
+      <li><span class="k">组合爆炸</span>「难点是组合爆炸：高速养护、城区占道、事故现场、临时管制，各自的锥桶排布、密度、光照背景完全不同，<strong>单一规则或单一模型都覆盖不全</strong>。」</li>
+      <li><span class="k">数据侧的问题</span>「数据侧要回答：怎么让一条链路同时消化差异这么大的场景，还能按需扩展。」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>三个讲点</h2>
+
+  <h3 class="sub">① DAG 编排 <span class="hint">先讲结构</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">节点拆分</span>「整条链路拆成职责单一的任务节点——挖掘、匹配、验证、导出——以 DAG 声明依赖后执行。」</li>
+      <li><span class="k">容错</span>「节点间数据落盘、状态可查，<strong>某一环失败只重跑该节点，不必从头再来</strong>。」</li>
+      <li><span class="k">并行吞吐</span>「节点按场景类型分组并行，不同场景的挖掘互不阻塞，整体吞吐不被最慢场景拖累。」</li>
+      <li><span class="k">算力分配</span>「算力按节点特性分：规则筛选和 IO 密集的走 CPU，模型推理排 GPU 队列。」</li>
+    </ol>
+  </div>
+
+  <h3 class="sub">② 场景解耦 <span class="hint">回答「组合爆炸」</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">独立参数</span>「每个场景类型各自维护独立的筛选条件和判定参数。」</li>
+      <li><span class="k">互不干扰</span>「调整高速养护的规则，不影响进行中的城区占道任务。差异极大的场景得以<strong>在同一条链路上独立演进</strong>。」</li>
+      <li><span class="k">点题</span>「这就是『消化差异』的答案：不是做一个大而全的规则，而是让差异活在配置里。」</li>
+    </ol>
+  </div>
+
+  <h3 class="sub">③ 多模型分工 <span class="hint">回答「按需扩展」</span></h3>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">分层接入</span>「接入 Qwen-VL、SAM3、YOLOv8 并按能力分层：视觉语言模型做场景级语义判断——是否施工区、什么排布类型；检测模型做实例级定位和计数；分割模型补轮廓精度。」</li>
+      <li><span class="k">提示词固化</span>「提示词逐项对照测试——同一场景不同表述提问、比较判分稳定性——稳定复现的组合固化成 config。<strong>换模型升级变成改配置，不是改代码。</strong>」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">2</span>收尾口述</h2>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">直接结果</span>「链路跑通后，多场景锥桶数据供给进入稳定节奏——<strong>每个训练与发版周期稳定满足 10w+ 的数据需求</strong>。」</li>
+      <li><span class="k">扩展方式变了</span>「更关键的是扩展方式变了：新增一类锥桶场景不再是写一套新脚本，而是<strong>加一个任务节点、补一段 config</strong>。」</li>
+      <li><span class="k">呼应前文</span>「之前专题沉淀的『配置化接入』在这里又验证了一次——这套东西是能生长的。」</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════ 05 · 项目 · Agent Skill 服务 ══════════════════ -->
+<section class="page" id="p4">
+  <div class="page-head">
+    <div class="kicker">04 · PROJECT · AI-NATIVE</div>
+    <h1>Agent Skill 知识服务化</h1>
+    <div class="sub">地平线 · 2026.06–2026.09 · 最近的 AI 应用落地，讲 2 分钟</div>
+    <span class="time-cost">适合被问「AI 时代数据团队怎么提效」时使用</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 背景 + 方案</div>
+    <ol class="say">
+      <li><span class="k">问题</span>「数据生产链路的知识——流程步骤、参数怎么填、不同项目类型的阈值差异——散落在文档、脚本注释和少数人的记忆里。文档是静态的，读者还得自己判断『我的场景该用哪组参数』。<strong>瓶颈不在缺文档，在知识无法被随时、准确地检索到。</strong>」</li>
+      <li><span class="k">第一层 · 知识沉淀</span>「把全流程知识整理成一套 Agent Skill——能力概览、快速路由表、速查卡、参考文档四层结构，把用户意图直接映射到对应内容。每个条目都落到可直接复制运行的命令和参数。特别重要的一点是<strong>显式声明越界情形</strong>——宁答『不在范围内』，不编造任何 ID、路径或命令。」</li>
+      <li><span class="k">第二层 · 服务化</span>「封装成容器化问答服务常驻集群，接进协作工具监听群消息，先回执确认再异步生成答案，会话 ID 维持多轮追问，回复渲染成平台原生卡片、命令直接可复制。」</li>
+      <li><span class="k">可靠性</span>「子会话被约束为只能依据 Skill 文档作答——<strong>从机制上杜绝编造</strong>。」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>收尾口述</h2>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">结果</span>「知识从『问人』变成『问服务』：团队在群里提问就能拿到带命令和参数的可执行答案。」</li>
+      <li><span class="k">验证了什么</span>「这个项目验证了一条路径——<strong>个人经验可以系统性地转化为团队随时可调用的工程资产</strong>，载体是一个能自己跑下去的服务，不需要专人维护。」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">2</span>讲这个项目的加分点</h2>
+  <ul class="pts">
+    <li><span class="b">「可靠地说不知道」是整个设计的眼。</span><span class="d">面试官听过太多人吹大模型能力，很少见到有人把「越界即拒答」设计进机制。主动讲这一点，直接区分你和其他把 AI 挂嘴边的候选人。</span></li>
+    <li><span class="b">三个工程决策值得点出：</span>
+      <ul>
+        <li>容器化交付 —— 消除环境差异</li>
+        <li>集群常驻 —— 可用性不依赖任何个人终端</li>
+        <li>数据挂载全部只读 —— 服务只需读取，写权限只会放大误操作后果</li>
+      </ul>
+      <span class="d">这三个都是「基础设施思维」的证据。</span>
+    </li>
+  </ul>
+
+</section>
+
+<!-- ══════════════════ 06 · 经历 · 刑侦数据分析 ══════════════════ -->
+<section class="page" id="p5">
+  <div class="page-head">
+    <div class="kicker">05 · EXPERIENCE · ROOTS</div>
+    <h1>电诈资金流向分析</h1>
+    <div class="sub">集侦云 · 2021.03–2021.06 · 讲 2 分钟</div>
+    <span class="time-cost">被问「最有成就感 / 最早期的代表性工作」时使用</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 背景</div>
+    <ol class="say">
+      <li><span class="k">案情</span>「一起以网络赌博为外壳的跨境电信诈骗案。资金从受害人充值进来之后，经过多层线上转账和线下取现反复拆分，最后流向境外。」</li>
+      <li><span class="k">数据现状</span>「原始材料是几十张字段口径互不一致的 Excel 和 SQL 表——账户、自然人、企业、交易流水相互交织。」</li>
+      <li><span class="k">常规做法的问题</span>「这类案件的常规做法是把全部关联投射成一张关系图，但那只能得到一张没法解读的稠密网络。」</li>
+      <li><span class="k">真正需要什么</span>「<strong>侦查需要的不是拓扑图，是几个可以立即去核查的具体账户。</strong>」</li>
+    </ol>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>四个方法步骤</h2>
+  <ul class="pts">
+    <li><span class="b">① 异构账表治理。</span><span class="d">几十张表分属赌资流水、银行明细、第三方支付——同一含义字段名不同、同一人证件号写法不一。逐表梳理字段语义、建立映射字典，修正缺失异常值、消解重复，整合入 MySQL，首次让全部数据源支持联合检索。</span></li>
+    <li><span class="b">② 实体对齐与建图。</span><span class="d">以账户、自然人、企业三类实体为核心节点，依据证件号、手机号、设备信息、交易对手建关联边，把案件还原为一张可计算的关系网络。</span></li>
+    <li><span class="b">③ 关系分级加权 —— 全案关键决策，重点讲。</span><span class="d">图上低价值关联的数量远大于资金主干，等权处理会让主干被淹没。以交易金额、交易频次、关系传递层级三个维度对边施加分级权重——主干资金链自然凸显。<strong>「分析结果的可读性由这一步直接决定」——这句话要讲出来，它是全案的胜负手。</strong></span></li>
+    <li><span class="b">④ 公开数据补全 + 路径追踪。</span><span class="d">自研爬虫采集征信平台的企业法人、股东结构、关联企业，把孤立企业节点接到真实自然人上，拓展出内部数据看不到的关联路径。然后沿加权主干逐层回溯，区分过账通道和终端归集账户，识别取现环节的卡农线索，输出按置信度排序的重点账户清单。</span></li>
+  </ul>
+
+  <h2 class="sec"><span class="n">2</span>收尾口述 —— 交付标准</h2>
+  <div class="script">
+    <ol class="say">
+      <li><span class="k">结果</span>「清单交给刑侦大队后逐一核实，协助勘破了该案。」</li>
+      <li><span class="k">确立的交付标准</span>「这段经历确立了我此后所有数据工作的交付标准：<strong>分析的终点是一个他人可独立核实的结论</strong>——不是一张视觉精美的关系图，也不是一组漂亮的中间指标。」</li>
+      <li><span class="k">映射到现在</span>「这个标准我后来带进了自动驾驶：每一批数据的产出都要能落到可核查的具体对象上，才具备工程价值。」</li>
+    </ol>
+    <span class="cue">「确立交付标准」是这段经历对现在岗位的映射——把早期经历和目标岗位缝起来的话术。</span>
+  </div>
+
+</section>
+
+<!-- ══════════════════ 07 · 常见算法题 ══════════════════ -->
+<section class="page" id="p6">
+  <div class="page-head">
+    <div class="kicker">06 · ALGORITHMS</div>
+    <h1>常见算法题速览</h1>
+    <div class="sub">数据岗高频手写题 · 每题记住「思路一句话 → 边界 → 复杂度」</div>
+    <span class="time-cost">先说思路再写代码；写完主动过一遍边界条件</span>
+  </div>
+
+  <nav class="algo-toc">
+    <div class="algo-toc-title">本页索引 · 点击卡片展开函数 · 点函数名直达代码</div>
+    <div class="algo-toc-grid">
+      <div class="algo-card" data-sec="algo-bin">
+        <div class="card-head"><span class="t">二分查找<span class="chev">▶</span></span><span class="sub">标准 · 左边界 · 旋转</span></div>
+        <div class="card-body">
+          <a href="#fn-binary-search">binary_search<b>标准二分</b></a>
+          <a href="#fn-lower-bound">lower_bound<b>查找左边界</b></a>
+          <a href="#fn-rot-search">search_rotated<b>旋转数组搜索</b></a>
+          <button class="jump" data-sec="algo-bin">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-sort">
+        <div class="card-head"><span class="t">排序算法<span class="chev">▶</span></span><span class="sub">六种排序</span></div>
+        <div class="card-body">
+          <a href="#fn-bubble-sort">bubble_sort<b>冒泡排序</b></a>
+          <a href="#fn-selection-sort">selection_sort<b>选择排序</b></a>
+          <a href="#fn-insertion-sort">insertion_sort<b>插入排序</b></a>
+          <a href="#fn-quick-sort">quick_sort<b>快速排序</b></a>
+          <a href="#fn-merge-sort">merge_sort<b>归并排序</b></a>
+          <a href="#fn-top-k">top_k_largest<b>堆 · Top-K</b></a>
+          <button class="jump" data-sec="algo-sort">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-hash">
+        <div class="card-head"><span class="t">哈希类<span class="chev">▶</span></span><span class="sub">空间换时间</span></div>
+        <div class="card-body">
+          <a href="#fn-two-sum">two_sum<b>两数之和</b></a>
+          <a href="#fn-group-anagrams">group_anagrams<b>字母异位词分组</b></a>
+          <a href="#fn-first-uniq">first_uniq_char<b>第一个只出现一次的字符</b></a>
+          <button class="jump" data-sec="algo-hash">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-twop">
+        <div class="card-head"><span class="t">双指针<span class="chev">▶</span></span><span class="sub">快慢 · 对撞</span></div>
+        <div class="card-body">
+          <a href="#fn-remove-duplicates">remove_duplicates<b>有序数组去重</b></a>
+          <a href="#fn-three-sum">three_sum<b>三数之和</b></a>
+          <a href="#fn-max-area">max_area<b>盛最多水的容器</b></a>
+          <a href="#fn-trap">trap<b>接雨水</b></a>
+          <button class="jump" data-sec="algo-twop">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-slide">
+        <div class="card-head"><span class="t">滑动窗口<span class="chev">▶</span></span><span class="sub">右扩左缩</span></div>
+        <div class="card-body">
+          <a href="#fn-longest-substring">length_of_longest_substring<b>无重复字符最长子串</b></a>
+          <a href="#fn-min-window">min_window<b>最小覆盖子串</b></a>
+          <a href="#fn-subarray-sum">subarray_sum<b>和为 K 的子数组</b></a>
+          <button class="jump" data-sec="algo-slide">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-linked">
+        <div class="card-head"><span class="t">链表<span class="chev">▶</span></span><span class="sub">指针操作</span></div>
+        <div class="card-body">
+          <a href="#fn-reverse-list">reverse_list<b>反转链表</b></a>
+          <a href="#fn-detect-cycle">detect_cycle<b>环检测 + 入口</b></a>
+          <a href="#fn-merge-two">merge_two_lists<b>合并有序链表</b></a>
+          <a href="#fn-intersection">get_intersection<b>第一个交点</b></a>
+          <a href="#fn-middle-node">middle_node<b>链表中点</b></a>
+          <button class="jump" data-sec="algo-linked">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-stack">
+        <div class="card-head"><span class="t">栈与队列<span class="chev">▶</span></span><span class="sub">互相实现 · 单调栈</span></div>
+        <div class="card-body">
+          <a href="#fn-valid">is_valid<b>有效括号</b></a>
+          <a href="#fn-myqueue">MyQueue<b>两栈实现队列</b></a>
+          <a href="#fn-daily-temp">daily_temperatures<b>每日温度 · 单调栈</b></a>
+          <button class="jump" data-sec="algo-stack">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-dp">
+        <div class="card-head"><span class="t">动态规划<span class="chev">▶</span></span><span class="sub">状态转移</span></div>
+        <div class="card-body">
+          <a href="#fn-climb">climb_stairs<b>爬楼梯</b></a>
+          <a href="#fn-rob">rob<b>打家劫舍</b></a>
+          <a href="#fn-kadane">max_sub_array<b>最大子数组和</b></a>
+          <a href="#fn-coin-change">coin_change<b>零钱兑换</b></a>
+          <a href="#fn-lcs">longest_common_subseq<b>最长公共子序列</b></a>
+          <button class="jump" data-sec="algo-dp">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-tree">
+        <div class="card-head"><span class="t">二叉树<span class="chev">▶</span></span><span class="sub">递归 + BFS</span></div>
+        <div class="card-body">
+          <a href="#fn-level-order">level_order<b>层序遍历</b></a>
+          <a href="#fn-lca">lowest_common_ancestor<b>最近公共祖先</b></a>
+          <a href="#fn-is-valid-bst">is_valid_bst<b>验证二叉搜索树</b></a>
+          <a href="#fn-max-depth">max_depth<b>最大深度</b></a>
+          <button class="jump" data-sec="algo-tree">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-graph">
+        <div class="card-head"><span class="t">图与搜索<span class="chev">▶</span></span><span class="sub">DFS · BFS · 网格</span></div>
+        <div class="card-body">
+          <a href="#fn-num-islands">num_islands<b>岛屿数量</b></a>
+          <a href="#fn-oranges">oranges_rotting<b>腐烂的橘子</b></a>
+          <button class="jump" data-sec="algo-graph">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-str">
+        <div class="card-head"><span class="t">字符串<span class="chev">▶</span></span><span class="sub">回文系列</span></div>
+        <div class="card-body">
+          <a href="#fn-palindrome">is_palindrome<b>验证回文串</b></a>
+          <a href="#fn-longest-pal">longest_palindrome<b>最长回文子串</b></a>
+          <button class="jump" data-sec="algo-str">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-design">
+        <div class="card-head"><span class="t">设计题<span class="chev">▶</span></span><span class="sub">大厂高频 · LRU</span></div>
+        <div class="card-body">
+          <a href="#fn-lru">LRUCache<b>LRU 缓存</b></a>
+          <button class="jump" data-sec="algo-design">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-misc">
+        <div class="card-head"><span class="t">位运算技巧<span class="chev">▶</span></span><span class="sub">异或 · 反转</span></div>
+        <div class="card-body">
+          <a href="#fn-single">single_number<b>只出现一次的数字</b></a>
+          <a href="#fn-missing">missing_number<b>缺失数字</b></a>
+          <a href="#fn-rotate">rotate<b>旋转数组</b></a>
+          <button class="jump" data-sec="algo-misc">跳到分组 ↓</button>
+        </div>
+      </div>
+      <div class="algo-card" data-sec="algo-interview">
+        <div class="card-head"><span class="t">岗位高频概念题<span class="chev">▶</span></span><span class="sub">闭环 · 不平衡 · 去重 · 版本管理</span></div>
+        <div class="card-body">
+          <a href="#algo-interview">12 个高频问答</a>
+          <button class="jump" data-sec="algo-interview">跳到分组 ↓</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <h2 class="sec algo-sec" id="algo-bin"><span class="n">1</span>二分查找</h2>
+
+  <h3 class="sub">标准二分 <span class="hint">变体母版 · O(log n) / O(1)</span></h3>
+  <div class="code"><pre id="fn-binary-search">def binary_search(nums, target):
+    left, right = 0, len(nums) - 1
+    while left &lt;= right:
+        mid = left + (right - left) // 2
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] &lt; target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「left + (right - left) // 2」防溢出——Python 无所谓，C++/Java 必须会。口述：有序数组、能一次排除一半的都用二分，值域单调也可以二分。</span></li>
+  </ul>
+
+  <h3 class="sub">查找左边界（第一个 ≥ target）<span class="hint">lower_bound · 变体之王</span></h3>
+  <div class="code"><pre id="fn-lower-bound">def lower_bound(nums, target):
+    left, right = 0, len(nums)
+    while left &lt; right:
+        mid = left + (right - left) // 2
+        if nums[mid] &lt; target:
+            left = mid + 1
+        else:
+            right = mid
+    return left</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">right 取 len(nums) 开区间；相等时收缩右界不返回——left 最终停在第一个 ≥ target 处。查右边界：lower_bound(nums, target + 1) - 1。</span></li>
+  </ul>
+
+  <h3 class="sub">搜索旋转排序数组 <span class="hint">LeetCode 33 · 大厂高频 · 判断哪半有序 · O(log n)</span></h3>
+  <div class="code"><pre id="fn-rot-search">def search_rotated(nums, target):
+    left, right = 0, len(nums) - 1
+    while left &lt;= right:
+        mid = left + (right - left) // 2
+        if nums[mid] == target:
+            return mid
+        # 左半段有序
+        if nums[left] &lt;= nums[mid]:
+            if nums[left] &lt;= target &lt; nums[mid]:
+                right = mid - 1
+            else:
+                left = mid + 1
+        # 右半段有序
+        else:
+            if nums[mid] &lt; target &lt;= nums[right]:
+                left = mid + 1
+            else:
+                right = mid - 1
+    return -1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">旋转数组一刀切成两段，必有一半是有序的——先判断哪半有序，再判断 target 在不在有序的那半里。「nums[left] &lt;= nums[mid]」的等号在两元素时必须带上，现场最容易漏。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-sort"><span class="n">2</span>排序算法</h2>
+
+  <h3 class="sub">冒泡排序 <span class="hint">最基础 · 提前终止优化 · O(n²)</span></h3>
+  <div class="code"><pre id="fn-bubble-sort">def bubble_sort(nums):
+    n = len(nums)
+    for i in range(n - 1):
+        swapped = False
+        for j in range(n - 1 - i):
+            if nums[j] &gt; nums[j + 1]:
+                nums[j], nums[j + 1] = nums[j + 1], nums[j]
+                swapped = True
+        if not swapped:
+            break
+    return nums</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">相邻比较、大者后移，每轮归位一个最大值。swapped 提前终止让「已有序」输入 O(n)。稳定排序。口述：教学意义大于实用，但「每轮归位一个 + 提前终止」是众多排序题的原型。</span></li>
+  </ul>
+
+  <h3 class="sub">选择排序 <span class="hint">交换次数最少 · O(n²)</span></h3>
+  <div class="code"><pre id="fn-selection-sort">def selection_sort(nums):
+    n = len(nums)
+    for i in range(n - 1):
+        m = i
+        for j in range(i + 1, n):
+            if nums[j] &lt; nums[m]:
+                m = j
+        if m != i:
+            nums[i], nums[m] = nums[m], nums[i]
+    return nums</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">每轮选剩余区间的最小值放到队首——交换次数最多 n-1 次，写内存开销敏感的场景（如闪存）反而是优点。不稳定。</span></li>
+  </ul>
+
+  <h3 class="sub">插入排序 <span class="hint">小数组/近乎有序时最快 · O(n²)</span></h3>
+  <div class="code"><pre id="fn-insertion-sort">def insertion_sort(nums):
+    for i in range(1, len(nums)):
+        key = nums[i]
+        j = i - 1
+        while j &gt;= 0 and nums[j] &gt; key:
+            nums[j + 1] = nums[j]
+            j -= 1
+        nums[j + 1] = key
+    return nums</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">像整理扑克牌：新牌往左插到合适位置。近乎有序输入 O(n)。口述：工程上快排/归并在小区间（&lt;16）都会切到插入排序——它在小数据上常数最小，这个细节说出来加分。</span></li>
+  </ul>
+
+  <h3 class="sub">快速排序 <span class="hint">手写概率最高 · 平均 O(n log n)，最坏 O(n²)</span></h3>
+  <div class="code"><pre id="fn-quick-sort">def quick_sort(nums, lo=0, hi=None):
+    if hi is None:
+        hi = len(nums) - 1
+    if lo &gt;= hi:
+        return
+    pivot = nums[(lo + hi) // 2]
+    i, j = lo, hi
+    while i &lt;= j:
+        while nums[i] &lt; pivot:
+            i += 1
+        while nums[j] &gt; pivot:
+            j -= 1
+        if i &lt;= j:
+            nums[i], nums[j] = nums[j], nums[i]
+            i += 1
+            j -= 1
+    quick_sort(nums, lo, j)
+    quick_sort(nums, i, hi)</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">双指针分区，原地、不稳定；取中间元素做 pivot 避开已排序数组的最坏情况。口述：最坏是分区极度不平衡退化为 O(n²)，工程上随机取 pivot 兜底。</span></li>
+  </ul>
+
+  <h3 class="sub">归并排序 <span class="hint">稳定 · O(n log n) 有保证 · 外部排序的基础</span></h3>
+  <div class="code"><pre id="fn-merge-sort">def merge_sort(nums):
+    if len(nums) &lt;= 1:
+        return nums
+    mid = len(nums) // 2
+    left = merge_sort(nums[:mid])
+    right = merge_sort(nums[mid:])
+    return merge(left, right)
+
+def merge(a, b):
+    result = []
+    i = j = 0
+    while i &lt; len(a) and j &lt; len(b):
+        if a[i] &lt;= b[j]:
+            result.append(a[i])
+            i += 1
+        else:
+            result.append(b[j])
+            j += 1
+    result.extend(a[i:])
+    result.extend(b[j:])
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「&lt;=」取等号保稳定性，空间 O(n)。口述：大数据排序用归并——分块落盘、多路归并，正是数仓外部排序的原理。</span></li>
+  </ul>
+
+  <h3 class="sub">堆 · Top-K <span class="hint">海量数据第 K 大 · O(n log k)</span></h3>
+  <div class="code"><pre id="fn-top-k">import heapq
+
+def top_k_largest(nums, k):
+    heap = []
+    for x in nums:
+        if len(heap) &lt; k:
+            heapq.heappush(heap, x)
+        elif x &gt; heap[0]:
+            heapq.heapreplace(heap, x)
+    return sorted(heap, reverse=True)</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">求最大 K 个用小顶堆（堆顶是第 K 大的守门员）。口述：海量数据 Top-K = 分治 + 堆——每台机器本地取 Top-K，汇总再取一次，MapReduce 同思路。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-hash"><span class="n">3</span>哈希类</h2>
+
+  <h3 class="sub">两数之和 <span class="hint">O(n²) → O(n) · 空间换时间</span></h3>
+  <div class="code"><pre id="fn-two-sum">def two_sum(nums, target):
+    seen = {}
+    for i, x in enumerate(nums):
+        if target - x in seen:
+            return [seen[target - x], i]
+        seen[x] = i
+    return []</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">先查后存——同一元素不会用两次。「存在性问题先想哈希」的起点题。</span></li>
+  </ul>
+
+  <h3 class="sub">字母异位词分组 <span class="hint">设计哈希键是核心</span></h3>
+  <div class="code"><pre id="fn-group-anagrams">from collections import defaultdict
+
+def group_anagrams(strs):
+    groups = defaultdict(list)
+    for s in strs:
+        key = ''.join(sorted(s))
+        groups[key].append(s)
+    return list(groups.values())</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">排序后的串做键 O(k log k)；进阶用 26 位计数元组做键 O(k)。口述：这类题的本质是「怎么把等价类映射到同一个键」。</span></li>
+  </ul>
+
+  <h3 class="sub">第一个只出现一次的字符 <span class="hint">剑指 Offer 50 · 两遍扫哈希计数</span></h3>
+  <div class="code"><pre id="fn-first-uniq">from collections import Counter
+
+def first_uniq_char(s):
+    count = Counter(s)
+    for i, ch in enumerate(s):
+        if count[ch] == 1:
+            return i
+    return -1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">第一遍计数、第二遍按原顺序找计数为 1 的——顺序信息只有原串有，哈希表只存频次。数据侧映射：按批次统计标签出现次数后找「只出现一次的异常标注」。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-twop"><span class="n">4</span>双指针</h2>
+
+  <h3 class="sub">原地删除有序数组重复项 <span class="hint">快慢指针模板</span></h3>
+  <div class="code"><pre id="fn-remove-duplicates">def remove_duplicates(nums):
+    if not nums:
+        return 0
+    slow = 0
+    for fast in range(1, len(nums)):
+        if nums[fast] != nums[slow]:
+            slow += 1
+            nums[slow] = nums[fast]
+    return slow + 1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">slow 指向已处理区末尾，fast 探路。快慢指针适用于「保留符合条件的、原地压缩」一切场景——迁移到工作就是按批次去重。</span></li>
+  </ul>
+
+  <h3 class="sub">三数之和 <span class="hint">排序 + 固定一个 + 双指针 · 去重是考点</span></h3>
+  <div class="code"><pre id="fn-three-sum">def three_sum(nums):
+    nums.sort()
+    result = []
+    n = len(nums)
+    for i in range(n - 2):
+        if i &gt; 0 and nums[i] == nums[i - 1]:
+            continue
+        if nums[i] &gt; 0:
+            break
+        left, right = i + 1, n - 1
+        while left &lt; right:
+            total = nums[i] + nums[left] + nums[right]
+            if total &lt; 0:
+                left += 1
+            elif total &gt; 0:
+                right -= 1
+            else:
+                result.append([nums[i], nums[left], nums[right]])
+                left += 1
+                right -= 1
+                while left &lt; right and nums[left] == nums[left - 1]:
+                    left += 1
+                while left &lt; right and nums[right] == nums[right + 1]:
+                    right -= 1
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">两层去重：i 层跳过重复的固定值，命中后 left/right 也要跳重复。O(n²)。面试官看的就是去重细节——漏一处就有重复三元组。</span></li>
+  </ul>
+
+  <h3 class="sub">盛最多水的容器 <span class="hint">对撞指针 · 每次移动短板</span></h3>
+  <div class="code"><pre id="fn-max-area">def max_area(height):
+    left, right = 0, len(height) - 1
+    best = 0
+    while left &lt; right:
+        area = (right - left) * min(height[left], height[right])
+        best = max(best, area)
+        if height[left] &lt; height[right]:
+            left += 1
+        else:
+            right -= 1
+    return best</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">移动短板才可能变大（移动长板：宽度减一、高度仍被短板限制，必不优）。O(n)。对撞指针的正确性证明要会说。</span></li>
+  </ul>
+
+  <h3 class="sub">接雨水 <span class="hint">LeetCode 42 · 困难高频 · 对撞双指针 O(n)/O(1)</span></h3>
+  <div class="code"><pre id="fn-trap">def trap(height):
+    left, right = 0, len(height) - 1
+    left_max = right_max = 0
+    water = 0
+    while left &lt; right:
+        if height[left] &lt; height[right]:
+            left_max = max(left_max, height[left])
+            water += left_max - height[left]
+            left += 1
+        else:
+            right_max = max(right_max, height[right])
+            water += right_max - height[right]
+            right -= 1
+    return water</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">每格水量 = min(左边最高, 右边最高) - 自身高度。对撞版妙处：矮的那侧更新后，left_max ≤ right_max 必然成立，直接结算不必等两边扫完。先讲清「按列求」的模型，再给这版实现。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-slide"><span class="n">5</span>滑动窗口</h2>
+
+  <h3 class="sub">无重复字符的最长子串 <span class="hint">窗口模板入门 · O(n)</span></h3>
+  <div class="code"><pre id="fn-longest-substring">def length_of_longest_substring(s):
+    last = {}
+    best = 0
+    left = 0
+    for right, ch in enumerate(s):
+        if ch in last and last[ch] &gt;= left:
+            left = last[ch] + 1
+        last[ch] = right
+        best = max(best, right - left + 1)
+    return best</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「last[ch] &gt;= left」防止窗口左移回退。口述：滑动窗口 = 右指针扩张、左指针按条件收缩，每个字符最多进出一次，所以 O(n)。</span></li>
+  </ul>
+
+  <h3 class="sub">最小覆盖子串 <span class="hint">窗口模板进阶 · 收缩时机是难点</span></h3>
+  <div class="code"><pre id="fn-min-window">from collections import Counter
+
+def min_window(s, t):
+    need = Counter(t)
+    missing = len(t)
+    left = 0
+    best = (0, 0)
+    for right, ch in enumerate(s):
+        if need[ch] &gt; 0:
+            missing -= 1
+        need[ch] -= 1
+        if missing == 0:
+            while need[s[left]] &lt; 0:
+                need[s[left]] += 1
+                left += 1
+            if best == (0, 0) or right - left &lt; best[1] - best[0]:
+                best = (left, right + 1)
+            need[s[left]] += 1
+            missing += 1
+            left += 1
+    return s[best[0]:best[1]]</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">missing 计数器代替每次比较 need 与 window；窗口刚好满足时收缩到极限、记录、再放掉左端继续。Counter 缺键返回 0 不报错，是这版简洁的关键。</span></li>
+  </ul>
+
+  <h3 class="sub">和为 K 的子数组 <span class="hint">LeetCode 560 · 前缀和 + 哈希 · 负数存在时滑动窗口失效</span></h3>
+  <div class="code"><pre id="fn-subarray-sum">from collections import defaultdict
+
+def subarray_sum(nums, k):
+    count = defaultdict(int)
+    count[0] = 1          # 空前缀，从头开始的子数组能被计数
+    prefix = 0
+    result = 0
+    for x in nums:
+        prefix += x
+        result += count[prefix - k]   # 之前有多少个前缀和 = prefix - k
+        count[prefix] += 1
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「子数组和 → 前缀和之差」：sum(i..j) = prefix[j] - prefix[i-1]，目标变成查「之前出现过多少个 prefix - k」。count[0] = 1 是最容易漏的初始化。数组含负数时窗口不单调，只能用这招——主动说出这个判断是加分点。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-linked"><span class="n">6</span>链表</h2>
+
+  <h3 class="sub">反转链表 <span class="hint">迭代三指针 · 必须盲写</span></h3>
+  <div class="code"><pre id="fn-reverse-list">def reverse_list(head):
+    prev = None
+    curr = head
+    while curr:
+        nxt = curr.next
+        curr.next = prev
+        prev = curr
+        curr = nxt
+    return prev</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">先存 next 再断链。口述：四个赋值一循环，画图讲最清楚。返回 prev——它是新头。</span></li>
+  </ul>
+
+  <h3 class="sub">环形链表检测 + 入口 <span class="hint">快慢指针 · Floyd 判圈</span></h3>
+  <div class="code"><pre id="fn-detect-cycle">def detect_cycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            entry = head
+            while entry is not slow:
+                entry = entry.next
+                slow = slow.next
+            return entry
+    return None</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">相遇后一个指针回头，同速再走，再相遇即入口——数学结论（a = c 等距关系）要能口述。应用映射：数据链路里检测循环依赖。</span></li>
+  </ul>
+
+  <h3 class="sub">合并两个有序链表 <span class="hint">哨兵节点省判空</span></h3>
+  <div class="code"><pre id="fn-merge-two">def merge_two_lists(l1, l2):
+    dummy = ListNode(0)
+    tail = dummy
+    while l1 and l2:
+        if l1.val &lt;= l2.val:
+            tail.next = l1
+            l1 = l1.next
+        else:
+            tail.next = l2
+            l2 = l2.next
+        tail = tail.next
+    tail.next = l1 if l1 else l2
+    return dummy.next</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">dummy 哨兵消掉「头节点谁当」的特判；尾插完剩余段直接接上。归并排序链表版的核心子过程。</span></li>
+  </ul>
+
+  <h3 class="sub">两个链表的第一个交点 <span class="hint">双指针走对方的路</span></h3>
+  <div class="code"><pre id="fn-intersection">def get_intersection(a, b):
+    p, q = a, b
+    while p is not q:
+        p = p.next if p else b
+        q = q.next if q else a
+    return p</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">两指针走的总长都是 a + b，无交点时同一时刻到达 None。O(n+m) / O(1)。不看长度、不拼接——面试官喜欢这版。</span></li>
+  </ul>
+
+  <h3 class="sub">链表的中间节点 <span class="hint">LeetCode 876 · 快慢指针一次遍历</span></h3>
+  <div class="code"><pre id="fn-middle-node">def middle_node(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    return slow</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">fast 走两步、slow 走一步，fast 到尾时 slow 恰在中点（偶数长度停在右中点）。它是「归并排序找中点」「回文链表找中点再反转后半段」的子过程——快慢指针三件套之一。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-stack"><span class="n">7</span>栈与队列</h2>
+
+  <h3 class="sub">有效括号 <span class="hint">栈的经典应用 · O(n)</span></h3>
+  <div class="code"><pre id="fn-valid">def is_valid(s):
+    pairs = {')': '(', ']': '[', '}': '{'}
+    stack = []
+    for ch in s:
+        if ch in pairs:
+            if not stack or stack[-1] != pairs[ch]:
+                return False
+            stack.pop()
+        else:
+            stack.append(ch)
+    return not stack</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">右括号查栈顶是否对应左括号；最后栈必须为空（漏判「((」）。映射工作：表达式解析、配置文件结构校验。</span></li>
+  </ul>
+
+  <h3 class="sub">用两个栈实现队列 <span class="hint">考察数据结构转换 · 均摊 O(1)</span></h3>
+  <div class="code"><pre id="fn-myqueue">class MyQueue:
+    def __init__(self):
+        self.in_stack = []
+        self.out_stack = []
+
+    def push(self, x):
+        self.in_stack.append(x)
+
+    def _shift(self):
+        if not self.out_stack:
+            while self.in_stack:
+                self.out_stack.append(self.in_stack.pop())
+
+    def pop(self):
+        self._shift()
+        return self.out_stack.pop()
+
+    def peek(self):
+        self._shift()
+        return self.out_stack[-1]
+
+    def empty(self):
+        return not self.in_stack and not self.out_stack</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">in 转 out 才能倒序；只在 out 空时倾倒——均摊 O(1)。口述：队头永远在 out 栈顶，转移时机是关键。</span></li>
+  </ul>
+
+  <h3 class="sub">每日温度 <span class="hint">LeetCode 739 · 单调栈模板 · 下一个更大元素</span></h3>
+  <div class="code"><pre id="fn-daily-temp">def daily_temperatures(temperatures):
+    result = [0] * len(temperatures)
+    stack = []                      # 存下标，栈内温度单调递减
+    for i, t in enumerate(temperatures):
+        while stack and temperatures[stack[-1]] &lt; t:
+            j = stack.pop()
+            result[j] = i - j       # 栈顶等到了更暖的一天
+        stack.append(i)
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「下一个更大」类问题标准解法：栈里存还没等到答案的下标，新元素来了把所有比它小的都结算掉。「求下一个/上一个更大更小」共四种变体，全是这一模板改比较方向。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-dp"><span class="n">8</span>动态规划</h2>
+
+  <h3 class="sub">爬楼梯 <span class="hint">DP 入门 = 斐波那契</span></h3>
+  <div class="code"><pre id="fn-climb">def climb_stairs(n):
+    if n &lt;= 2:
+        return n
+    prev, curr = 1, 2
+    for _ in range(3, n + 1):
+        prev, curr = curr, prev + curr
+    return curr</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">dp[i] = dp[i-1] + dp[i-2]，滚动变量压到 O(1)。被追问就讲状态定义：到第 i 阶的走法数。</span></li>
+  </ul>
+
+  <h3 class="sub">打家劫舍 <span class="hint">选或不选 · 相邻不能连选</span></h3>
+  <div class="code"><pre id="fn-rob">def rob(nums):
+    prev, curr = 0, 0
+    for x in nums:
+        prev, curr = curr, max(curr, prev + x)
+    return curr</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">curr = 不抢当前（沿用 curr）或抢（prev + x）的最大值。一行状态转移，「偷不偷当前」决策类模板。</span></li>
+  </ul>
+
+  <h3 class="sub">最大子数组和 <span class="hint">Kadane · O(n) 一遍扫</span></h3>
+  <div class="code"><pre id="fn-kadane">def max_sub_array(nums):
+    best = curr = nums[0]
+    for x in nums[1:]:
+        curr = max(x, curr + x)
+        best = max(best, curr)
+    return best</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">curr = 前缀贡献为正则延续、为负则从当前重新开始。口述：负收益的历史直接丢弃——数据侧对应「连续区间指标分析」。</span></li>
+  </ul>
+
+  <h3 class="sub">零钱兑换 <span class="hint">LeetCode 322 · 完全背包 · 大厂高频</span></h3>
+  <div class="code"><pre id="fn-coin-change">def coin_change(coins, amount):
+    dp = [float('inf')] * (amount + 1)
+    dp[0] = 0
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c &lt;= a:
+                dp[a] = min(dp[a], dp[a - c] + 1)
+    return dp[amount] if dp[amount] != float('inf') else -1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">dp[a] = 凑出金额 a 的最少硬币数；「凑不出」用 inf 哨兵而不是 -1，转移才不会被污染。口述模板：问最少/最多方案数就是完全背包，外层金额、内层硬币，顺序无所谓；若问「组合数」内外层必须交换（先硬币后金额）——能否说出这个区别是区分度所在。</span></li>
+  </ul>
+
+  <h3 class="sub">最长公共子序列 <span class="hint">LeetCode 1143 · 二维 DP 代表作 · diff 工具的原理</span></h3>
+  <div class="code"><pre id="fn-lcs">def longest_common_subseq(text1, text2):
+    m, n = len(text1), len(text2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i - 1] == text2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">二维表格：字符相等从左上角 +1，不相等取上/左最大。第 0 行第 0 列天然为 0 不用初始化。映射工程：git diff、标注文件版本对比，底层都是 LCS。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-tree"><span class="n">9</span>二叉树</h2>
+
+  <h3 class="sub">层序遍历（BFS 分层）<span class="hint">队列 + 按层切分</span></h3>
+  <div class="code"><pre id="fn-level-order">from collections import deque
+
+def level_order(root):
+    if not root:
+        return []
+    result = []
+    queue = deque([root])
+    while queue:
+        layer = []
+        for _ in range(len(queue)):
+            node = queue.popleft()
+            layer.append(node.val)
+            if node.left:
+                queue.append(node.left)
+            if node.right:
+                queue.append(node.right)
+        result.append(layer)
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「for _ in range(len(queue))」是分层关键——先记当前层节点数再消费。标签树的层级遍历同构，可主动映射。</span></li>
+  </ul>
+
+  <h3 class="sub">最近公共祖先 <span class="hint">递归定义清晰即答对</span></h3>
+  <div class="code"><pre id="fn-lca">def lowest_common_ancestor(root, p, q):
+    if root is None or root is p or root is q:
+        return root
+    left = lowest_common_ancestor(root.left, p, q)
+    right = lowest_common_ancestor(root.right, p, q)
+    if left and right:
+        return root
+    return left if left else right</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">p、q 分居两侧时当前节点即答案；都在一侧则答案在那侧。映射标签树：两个标签的最近公共父标签。</span></li>
+  </ul>
+
+  <h3 class="sub">验证二叉搜索树 <span class="hint">LeetCode 98 · 陷阱：只比较父子 · 上下界递归</span></h3>
+  <div class="code"><pre id="fn-is-valid-bst">def is_valid_bst(root):
+    def check(node, lo, hi):
+        if node is None:
+            return True
+        if not (lo &lt; node.val &lt; hi):
+            return False
+        return check(node.left, lo, node.val) and \
+               check(node.right, node.val, hi)
+    return check(root, float('-inf'), float('inf'))</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">常见错解只比较节点和左右孩子——错在孙子可能违反祖父的约束。正确做法是把 (lo, hi) 开区间一路传下去。口述替代方案：中序遍历结果必须严格递增，两种说法都要会。</span></li>
+  </ul>
+
+  <h3 class="sub">二叉树的最大深度 <span class="hint">LeetCode 104 · 递归一行 · 热身送分题</span></h3>
+  <div class="code"><pre id="fn-max-depth">def max_depth(root):
+    if root is None:
+        return 0
+    return 1 + max(max_depth(root.left), max_depth(root.right))</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">「我的深度 = 1 + 左右子树深度的较大者」——递归三要素（定义、边界、转移）的标准示范。常作为递归题的切入点，30 秒写完把时间留给后面的追问。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-graph"><span class="n">10</span>图与搜索（网格 DFS/BFS）</h2>
+
+  <h3 class="sub">岛屿数量 <span class="hint">LeetCode 200 · 网格 DFS 母题 · 字节/阿里高频</span></h3>
+  <div class="code"><pre id="fn-num-islands">def num_islands(grid):
+    if not grid:
+        return 0
+    rows, cols = len(grid), len(grid[0])
+    count = 0
+
+    def dfs(r, c):
+        if r &lt; 0 or r &gt;= rows or c &lt; 0 or c &gt;= cols:
+            return
+        if grid[r][c] != '1':
+            return
+        grid[r][c] = '0'          # 沉岛：访问过直接改标记
+        dfs(r + 1, c); dfs(r - 1, c)
+        dfs(r, c + 1); dfs(r, c - 1)
+
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == '1':
+                count += 1
+                dfs(r, c)
+    return count</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">遍历到陆地就计数 +1，然后 DFS 把整块连通的陆地全部「沉掉」——每个岛屿只被计一次。网格四方向递归 + 越界/访问判断，是所有网格搜索题的骨架。追问会变体：最大岛屿面积（返回 dfs 计数）、岛屿周长。</span></li>
+  </ul>
+
+  <h3 class="sub">腐烂的橘子 <span class="hint">LeetCode 994 · 多源 BFS · 按层扩散求最短时间</span></h3>
+  <div class="code"><pre id="fn-oranges">from collections import deque
+
+def oranges_rotting(grid):
+    rows, cols = len(grid), len(grid[0])
+    queue = deque()
+    fresh = 0
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == 2:
+                queue.append((r, c))
+            elif grid[r][c] == 1:
+                fresh += 1
+
+    minutes = 0
+    while queue and fresh:
+        minutes += 1
+        for _ in range(len(queue)):       # 一轮 = 一分钟
+            r, c = queue.popleft()
+            for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nr, nc = r + dr, c + dc
+                if 0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols and grid[nr][nc] == 1:
+                    grid[nr][nc] = 2
+                    fresh -= 1
+                    queue.append((nr, nc))
+    return minutes if fresh == 0 else -1</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">多源 BFS：所有腐烂橘子同时入队当第 0 层，「按层消费」让每层 = 一分钟。「求最少步数/最短时间用 BFS 不用 DFS」——无权图上 BFS 第一次到达即最短。fresh == 0 的收尾判断别漏。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-str"><span class="n">11</span>字符串</h2>
+
+  <h3 class="sub">验证回文串 <span class="hint">过滤 + 对撞双指针</span></h3>
+  <div class="code"><pre id="fn-palindrome">def is_palindrome(s):
+    chars = [c.lower() for c in s if c.isalnum()]
+    left, right = 0, len(chars) - 1
+    while left &lt; right:
+        if chars[left] != chars[right]:
+            return False
+        left += 1
+        right -= 1
+    return True</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">isalnum 过滤标点空格再对撞比较。先过滤后比较，不要在原串上跳指针（易越界）。</span></li>
+  </ul>
+
+  <h3 class="sub">最长回文子串 <span class="hint">中心扩展 · O(n²) 但常数小、现场不易写错</span></h3>
+  <div class="code"><pre id="fn-longest-pal">def longest_palindrome(s):
+    def expand(left, right):
+        while left &gt;= 0 and right &lt; len(s) and s[left] == s[right]:
+            left -= 1
+            right += 1
+        return s[left + 1:right]
+
+    if not s:
+        return ''
+    best = s[0]
+    for i in range(len(s)):
+        cand = max(expand(i, i), expand(i, i + 1), key=len)
+        if len(cand) &gt; len(best):
+            best = cand
+    return best</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">奇偶两种中心（i 单字符、i 与 i+1 双字符）。会 DP 也可讲 O(n²) 表格法，但中心扩展现场更稳。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-design"><span class="n">12</span>设计题</h2>
+
+  <h3 class="sub">LRU 缓存 <span class="hint">LeetCode 146 · 大厂必考 · 哈希 + 双向链表 · O(1)</span></h3>
+  <div class="code"><pre id="fn-lru">class Node:
+    def __init__(self, key=0, val=0):
+        self.key, self.val = key, val
+        self.prev = self.next = None
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.map = {}                       # key -&gt; 节点
+        self.head, self.tail = Node(), Node()  # 哨兵：head 新、tail 旧
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def _remove(self, node):
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def _add_front(self, node):
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+
+    def get(self, key):
+        if key not in self.map:
+            return -1
+        node = self.map[key]
+        self._remove(node)                  # 访问即最新：摘下插到队头
+        self._add_front(node)
+        return node.val
+
+    def put(self, key, value):
+        if key in self.map:
+            self._remove(self.map[key])
+        node = Node(key, value)
+        self.map[key] = node
+        self._add_front(node)
+        if len(self.map) &gt; self.cap:        # 淘汰队尾（最久未用）
+            lru = self.tail.prev
+            self._remove(lru)
+            del self.map[lru.key]           # 节点里存 key 才能反向删 map</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">两个哨兵节点消掉所有判空——头尾永远存在，指针操作只有四行。get/put 都是「摘下插队头」；超容量删 tail.prev。节点里必须存 key：淘汰链表节点时要反删哈希表。口述：Python 面试可直接说 OrderedDict / functools.lru_cache 十行实现，但手写版才是考点。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-misc"><span class="n">13</span>位运算与数组技巧</h2>
+
+  <h3 class="sub">只出现一次的数字 <span class="hint">异或自抵消 · O(n) / O(1)</span></h3>
+  <div class="code"><pre id="fn-single">def single_number(nums):
+    result = 0
+    for x in nums:
+        result ^= x
+    return result</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">异或交换律、结合律，成对抵消为 0。口述：位运算先记三条——异或自抵消、x &amp; (x-1) 去最低位 1、x &amp; (-x) 取最低位 1。</span></li>
+  </ul>
+
+  <h3 class="sub">缺失数字 <span class="hint">求和差 · 数学法优先于哈希</span></h3>
+  <div class="code"><pre id="fn-missing">def missing_number(nums):
+    n = len(nums)
+    return n * (n + 1) // 2 - sum(nums)</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">0..n 缺一个：期望和减实际和。先给 O(n) 哈希，再主动升级到 O(1) 空间数学法——展示「先对后优」。</span></li>
+  </ul>
+
+  <h3 class="sub">旋转数组（三段反转）<span class="hint">O(n) 时间 O(1) 空间</span></h3>
+  <div class="code"><pre id="fn-rotate">def rotate(nums, k):
+    n = len(nums)
+    if n == 0:
+        return
+    k %= n
+    nums.reverse()
+    nums[:k] = reversed(nums[:k])
+    nums[k:] = reversed(nums[k:])</pre></div>
+  <ul class="pts">
+    <li><span class="b">要点。</span><span class="d">整体反转 → 前 k 反转 → 余下反转，画一次图就永远记得。注意 k %= n 防 k 大于长度。</span></li>
+  </ul>
+
+  <h2 class="sec algo-sec" id="algo-interview"><span class="n">14</span>数据闭环岗 · 高频概念题</h2>
+  <ul class="pts">
+    <li><span class="b">「数据闭环是什么？」</span><span class="d">→ 模型上线后，badcase 和真实场景数据回流 → 挖掘/标注/真值 → 再训练 → 发版上车，形成自增强循环。<strong>回答模板：先给定义，再落到自己的实践</strong>——「我在地平线做的就是这条循环的数据侧：标签、检索、挖掘、标注、打包」。</span></li>
+    <li><span class="b">「标注质量怎么保证？」</span><span class="d">→ 四层：规则文档统一口径（消除主观裁量）→ 预标注降错率 → 质检抽检拦截 → 标效/准确率统计驱动返修。每层都有你做过的实例，直接讲。</span></li>
+    <li><span class="b">「类别不平衡怎么办？」</span><span class="d">→ 数据侧答：重采样（欠采样大类/过采样小类）＋ 按目标比例构造训练集版本；模型侧补一句（focal loss、加权）表示懂全局，重心留在数据侧——你的岗位在数据侧。</span></li>
+    <li><span class="b">「怎么评估一个数据集的质量？」</span><span class="d">→ 分布合理性（类别占比 vs 真实场景频率）→ 标注准确性（抽检准确率）→ 覆盖度（场景类型矩阵有没有空洞）→ 时效性（数据新鲜度）。打包内建的完整性/格式/分布三层校验就是这套标准的落地。</span></li>
+    <li><span class="b">「数据版本管理怎么做？」</span><span class="d">→ 每次打包是一个不可变版本，带数据清单与校验记录；可回溯到批次与切片；标签口径变了走全量重打标生成新版本而不是改老版本——「数据集也要像代码一样可回滚」。</span></li>
+    <li><span class="b">「大数据量下去重怎么做？」</span><span class="d">→ 精确去重：哈希（MD5/感知哈希）分桶后桶内比对；相似去重：Embedding + 向量检索或局部敏感哈希。你的实践：按项目类型的去重阈值（如 0.92/0.94）配 LSH，逐项目固化成 config。</span></li>
+    <li><span class="b">「长尾/稀疏类别数据怎么搞？」</span><span class="d">→ 这是你的主场：三级漏斗（规则粗筛 → 大模型语义精提 → 规则化人审），递进式成本分配，让最贵的人工只看过滤后的一小撮——小动物专题整页都是弹药。</span></li>
+    <li><span class="b">「如果不考虑成本，全量标注不就行了？」</span><span class="d">→ 反驳点：标注不是成本问题而是<strong>信号密度</strong>问题——百万级样本里正样本可能不到千分之一，全量标注后训练收益趋零，还稀释正常类别。<strong>数据的价值密度比数量重要</strong>，这正是「筛得更准」的意义。</span></li>
+    <li><span class="b">「挖出的数据怎么确认对训练有效？」</span><span class="d">→ 对照实验：新数据混入训练集 vs 基线，同配置训练，评测集对比指标；指标要看切片（新类别召回）不只看总 mAP；你做过训练与发版支撑，发版文档里就是这个证据链。</span></li>
+    <li><span class="b">「Python 处理大数据为什么要用生成器？」</span><span class="d">→ 惰性求值、常数内存、可流式处理——读大文件/大批次数据不落全量到内存。你的实践：打包和挖掘链路都是流式的，按批次组织任务也是同一思想。</span></li>
+    <li><span class="b">「Pandas 大表慢怎么办？」</span><span class="d">→ 向量化替代 iterrows → dtype 降（int64→int32）→ 分块 chunksize 流式读 → 真正大了上 Spark/数仓。答案体现「知道单机工具的边界在哪、什么时候该换武器」。</span></li>
+    <li><span class="b">「和算法团队有分歧怎么处理？」</span><span class="d">→ 场景化答：算法要一批『高置信度即可』的数据、你觉得标准太松——用数据说话：抽样评估该标准的真实准确率给对方看，分歧落到可量化事实上。<strong>数据人解决分歧的方式永远是再算一次</strong>。</span></li>
+  </ul>
+
+  <div class="tip"><b>临场策略：</b>数据岗的算法题大多是「够用就好」——面试官看的是边界意识（空数组、重复元素、越界）和复杂度判断，不是竞赛级最优解。写完主动说「我先过一遍边界」；复杂度记不清就说量级推导过程，别背结论。</div>
+</section>
+
+<!-- ══════════════════ 09 · 收尾 · 反问与离场 ══════════════════ -->
+<section class="page" id="p7">
+  <div class="page-head">
+    <div class="kicker">07 · CLOSING</div>
+    <h1>反问环节 & 临场提醒</h1>
+    <div class="sub">最后五分钟同样被评估 · 反问的质量 = 你对岗位理解的深度</div>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>反问清单（按优先级挑 2 个）</h2>
+  <ul class="pts">
+    <li><span class="b">「团队目前数据链路上，最痛的断点在哪个环节？」</span><span class="d">——把话题拉回你的主场，同时拿到真实的需求信息，回答时可以自然映射自己的经验。</span></li>
+    <li><span class="b">「这个岗位前三个月，您期望先跑通哪件事？」</span><span class="d">——表达「以交付定义成功」的工作观，和你的交付标准叙事一脉相承。</span></li>
+    <li><span class="b">「团队现在怎么用 AI？有没有把经验沉淀成 Skill 或工具的实践？」</span><span class="d">——展示你的差异化能力，也在试探团队的技术氛围。</span></li>
+    <li><span class="b">备用：数据供给和算法需求之间的接口是什么形态？按周期排还是按需配置？</span><span class="d">——专业问题，体现你懂闭环运作。</span></li>
+  </ul>
+
+  <h2 class="sec"><span class="n">2</span>临场提醒</h2>
+  <ul class="pts">
+    <li><span class="b">整场面试的主旋律自始至终只有一句：</span><span class="d">「让数据链路不需要人推着走」——自我介绍、项目、反问，全部围绕它。三个项目（闭环、锥桶、Agent Skill）本质都是这句话在不同尺度的实例。面试官记住一句话，好过记住十个技能点。</span></li>
+    <li><span class="b">没把握的问题先复述确认。</span><span class="d">「您是想问召回的量化方式，还是先验规则的覆盖范围？」——既争取思考时间，也展示沟通质量。</span></li>
+    <li><span class="b">不知道就说不知道，但要给路径。</span><span class="d">「这个我没有实测数据，但我可以讲我会怎么去量它」——和 Agent Skill 的越界声明一个逻辑：可靠地说不知道，是工程素养。</span></li>
+    <li><span class="b">所有数字与口径以 PDF 简历为准。</span><span class="d">面试官手里那份和你嘴里说的必须对得上——对不上的地方先以简历为基准澄清，别现场改口。</span></li>
+    <li><span class="b">薪资、离职原因等敏感问题提前单独准备。</span><span class="d">本稿不覆盖。原则：离职原因不评价前司，归因于「岗位方向的选择」。</span></li>
+  </ul>
+
+  <div class="tip"><b>最后一条：</b>口述稿是地图不是剧本。「」里的话保证开场和各项目第一段说得出、说得顺即可，中间的细节层理解了逻辑自然会讲。面试前过两遍：第一遍通读，第二遍只看每页的口述条目标签。</div>
+</section>
+
+<!-- ══════════════════ 10 · 代码 · LMDB 打包读写封装 ══════════════════ -->
+<section class="page" id="p8">
+  <div class="page-head">
+    <div class="kicker">08 · CODE · LMDB BASE</div>
+    <h1>lmdb_base.py · LMDB 打包读写封装（含 debug 自测）</h1>
+    <div class="sub">训练数据打包 → 训练读取的底层存储组件 · PackType 接口 + Lmdb 实现 + 打包复现自测</div>
+    <span class="time-cost">被问「打包格式怎么选 / LMDB 读写细节 / 怎么验证打包结果」时使用</span>
+  </div>
+
+  <div class="script">
+    <div class="tag">SPEECH · 一分钟讲清这个组件</div>
+    <ol class="say">
+      <li><span class="k">定位</span>「这是训练数据打包链路的底层存储组件：<strong>一个抽象接口 PackType，一个 LMDB 实现</strong>。打包脚本按接口写入，训练 dataloader 按接口读取——上层不感知底层格式，未来要换 REC 或其他格式，新写一个子类就行。」</li>
+      <li><span class="k">为什么用 LMDB</span>「mmap 零拷贝读性能极高、支持多进程并发只读、写入基于事务保证 ACID、单文件便于分发——深度学习训练数据的工业标准选择。」</li>
+      <li><span class="k">几个关键设计</span>「写侧<strong>分批提交</strong>（commit_step）控制事务尺寸、异常中断最多丢最后一批；<strong>懒加载恢复</strong>——close 之后 read/write 自动重开，句柄失效不用重启进程；读侧 <strong>readonly + lock=False</strong> 允许 DataLoader 多 worker 并发；实现了 <strong>pickle 钩子</strong>，跨进程传递时自动关闭本进程句柄、子进程重建自己的——mmap 句柄是进程私有资源，不能直接序列化。」</li>
+      <li><span class="k">debug 自测</span>「文件尾部内置了打包复现自测：模拟打包（连续 idx 写入 + __len__ 收尾）→ 只读逐条校验 → 边界行为（close 后重写、reset、无 __len__ 时 cursor 慢路径、pickle 跨进程），还能对现网真实打包产物做体检——抽首中尾样本查 JPEG magic、比对 __len__ 与 stat entries 定位丢数据。」</li>
+    </ol>
+    <span class="cue">⚠ 代码全文如下。「大引号」内的口述稿先讲定位和设计取舍，代码是被追问时的底气。</span>
+  </div>
+
+  <h2 class="sec"><span class="n">1</span>完整代码 · lmdb_base.py</h2>
+  <div class="code"><pre id="lmdb-full-code"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;
+  Author:  weidong.he
+  Date: 2026-09-16 10:19:08
+  LastEditTime: 2026-09-16 10:19:09
+  LastEditors:  weidong.he
+  FilePath: /poly_app/lmdb_base.py
+  Description:  LMDB 数据文件读写封装（训练数据打包 / 读取的基础组件）。
+
+═══════════════════════════════════════════════════════════════════════════
+【文件整体定位】
+═══════════════════════════════════════════════════════════════════════════
+本文件是&quot;训练数据打包 → 训练时读取&quot;链路中的底层存储组件，包含两个类：
+
+  1. PackType —— 抽象基类（接口定义层）
+     - 使用 abc.ABC 声明为抽象类，本身不能被实例化；
+     - 定义了一套&quot;数据文件操作&quot;的标准接口（打开/关闭/读/写/重置/取key/取长度）；
+     - 目的：面向接口编程。上层代码（打包脚本、训练 dataloader）只依赖
+       PackType 的方法签名，不感知底层是 LMDB 还是 REC（MXNet）或其他格式；
+     - 若未来要换存储格式，只需新写一个子类实现同样接口，上层代码零改动。
+     - 注意：本文件中接口方法只写了 docstring 没写 @abstractmethod 装饰器，
+       属于&quot;约定式接口&quot;而非强制接口——子类漏实现某个方法不会在定义时报错，
+       只会在调用时抛出 AttributeError 或静默调用空方法。
+
+  2. Lmdb —— 具体实现类（基于 python lmdb 库）
+     - 实现 PackType 的全部接口，封装了 LMDB 文件的全部读写细节。
+
+═══════════════════════════════════════════════════════════════════════════
+【什么是 LMDB】
+═══════════════════════════════════════════════════════════════════════════
+LMDB (Lightning Memory-Mapped Database) 是一个基于 B+ 树、基于内存映射
+(mmap) 的嵌入式键值数据库（不需要独立的数据库服务进程）。特点：
+  - 读性能极高（数据直接 mmap 到进程地址空间，读取零拷贝）；
+  - 支持多进程并发只读（配合 readonly + lock=False）；
+  - 写入基于事务（ACID），数据按 key 有序存储；
+  - 单文件（实际上是 data.mdb + lock.mdb 两个文件）便于打包和分发。
+因此深度学习领域常用它存储训练数据：每条样本（序列化后的图片+标注 bytes）
+是一个 value，样本序号（字符串化的整数）是 key。
+Caffe 生态最早大规模使用，后来 Horizon/地平线的训练框架也普遍采用。
+
+═══════════════════════════════════════════════════════════════════════════
+【典型使用方式】
+═══════════════════════════════════════════════════════════════════════════
+写入侧（数据打包脚本）：
+    db = Lmdb(&quot;/path/to/data.lmdb&quot;, writable=True)   # 写模式打开
+    for i, record in enumerate(records):             # record: bytes
+        db.write(i, record)                          # key=b&#x27;0&#x27;, b&#x27;1&#x27;, ...
+    db.write(&quot;__len__&quot;, str(len(records)).encode())  # 可选：记录总条数
+    db.close()                                       # 尾部commit + sync落盘
+
+读取侧（训练 dataloader）：
+    db = Lmdb(&quot;/path/to/data.lmdb&quot;, writable=False)  # 只读模式，多进程可并发
+    keys = db.get_keys()                             # 所有可用 key
+    data = db.read(0)                                # 读第 0 条样本 -&gt; bytes
+
+&quot;&quot;&quot;
+
+# logging: 标准库日志模块。用 __name__ 作为 logger 名，
+# 使得日志能按模块层级过滤/输出（运行时显示为 &quot;lmdb_base&quot;）。
+import logging
+# ABC: Abstract Base Class，Python 标准库的抽象基类支持。
+# 继承 ABC 的类即为抽象类；若配合 @abstractmethod 使用则可强制子类实现。
+from abc import ABC
+# Union: 类型注解工具，表示参数可以是多种类型之一，
+# 如 Union[int, str] 表示既可传 int 也可传 str。
+from typing import Union
+
+# lmdb: 第三方 LMDB 绑定库（pip install lmdb），
+# 提供环境(Environment)、事务(Transaction)、游标(Cursor)三级抽象。
+import lmdb
+# timeout_decorator: 第三方超时装饰器库。
+#   @timeout(seconds=N) —— 被装饰的函数若执行超过 N 秒，
+#   会被强制中断并向调用方抛出该库自定义的 TimeoutError。
+#   注意：这里 import 的 TimeoutError 是 timeout_decorator 自己的异常类，
+#   而不是 Python 内置的 TimeoutError，所以 except 才能精确捕获到它。
+# 使用动机：LMDB 文件常放在 NFS 等网络存储上，open/get 操作可能因
+# 网络抖动无限阻塞，导致整个训练/打包进程挂死。加 600 秒超时后，
+# 卡死会转变为可捕获、可记录、可重试的异常。
+from timeout_decorator import TimeoutError, timeout
+
+# 模块级 logger：本模块内所有类共用，日志会带上模块名前缀方便定位问题。
+logger = logging.getLogger(__name__)
+
+
+class PackType(ABC):
+    &quot;&quot;&quot;Data type interface class.
+
+    ────────────────────────────────────────────────────────────────────
+    【角色】数据打包类型的抽象基类 = &quot;数据文件应该长什么样&quot;的接口契约。
+    ────────────────────────────────────────────────────────────────────
+
+    设计动机（为什么需要这个类）：
+      打包训练数据可能选用不同的底层格式（LMDB / MXNet REC / 纯文件夹...）。
+      如果上层代码直接写 `import lmdb; lmdb.open(...)`，格式就被焊死了。
+      引入 PackType 后，上层只调用统一接口：
+          packer: PackType = Lmdb(...)      # 或未来换成 Rec(...)
+          packer.write(i, record)
+      底层格式切换时上层代码不需要任何修改——这就是&quot;依赖抽象而非实现&quot;
+      （依赖倒置原则）的具体落地。
+
+    抽象方法说明（子类必须提供的完整生命周期）：
+        open()      打开文件，建立连接       ← 生命周期的开始
+        write()     写入一条记录            ← 打包阶段
+        read()      读取一条记录            ← 训练读取阶段
+        get_keys()  获取全部可读 key        ← 读取侧遍历索引
+        __len__()   获取记录总数            ← 读取侧知道数据集大小
+        reset()     重置句柄                ← 异常恢复（句柄失效时重开）
+        close()     关闭并落盘              ← 生命周期的结束
+        __del__()   析构兜底                ← 防止用户忘记 close 造成泄漏
+
+    接口约定（隐含的契约，子类实现时必须遵守）：
+      1. write(idx, record)：key 由整数 idx 转化而来，record 是 bytes；
+      2. read(idx)：写入时的 idx 就是读取时的 idx，即 write/read 用同一套 key；
+      3. 所有方法应当可重复安全调用（幂等），尤其是 open/close；
+      4. close 之后再次 read/write 应能自动重新打开（懒加载恢复），
+         本文件的 Lmdb 实现即按此约定做了懒加载处理。
+    &quot;&quot;&quot;
+
+    def open(self):
+        &quot;&quot;&quot;Open the data file.
+        打开数据文件并建立可用的读写连接（句柄）。
+        约定：若文件已打开则不重复打开（幂等）。&quot;&quot;&quot;
+
+    def close(self):
+        &quot;&quot;&quot;Close the data file.
+        关闭数据文件：写模式下需保证未提交的数据完整落盘，
+        然后释放文件句柄等系统资源。
+        约定：若文件未打开则不做任何事（幂等）。&quot;&quot;&quot;
+
+    def write(self, idx: int, record: bytes):
+        &quot;&quot;&quot;Write record into data file by idx.
+        以 idx 为 key、record 为 value 写入一条记录。
+        参数:
+            idx: 样本序号（整数），子类负责把它转成底层格式需要的 key
+                 （LMDB 中通常转为 ascii bytes，如 123 -&gt; b&#x27;123&#x27;）；
+            record: 一条完整的序列化样本数据（bytes），通常是
+                    &quot;图片二进制 + 标注信息&quot; 打包后的结果。&quot;&quot;&quot;
+
+    def read(self, idx):
+        &quot;&quot;&quot;Read the idx-th data.
+        按 idx 读取一条记录，返回 bytes。
+        idx 与 write 时的 idx 一一对应。&quot;&quot;&quot;
+
+    def reset(self):
+        &quot;&quot;&quot;Reset the data file operator.
+        重置文件操作句柄：先关闭再重新打开。
+        使用场景：长时间运行的进程中，文件句柄可能因网络文件系统
+        断连、超时等原因失效，调用 reset 可以拿到全新的句柄恢复工作。&quot;&quot;&quot;
+
+    def get_keys(self):
+        &quot;&quot;&quot;Get keys for read.
+        返回文件中所有可读取的 key（可迭代对象）。
+        读取侧用它在不知道样本分布的情况下遍历整个数据集，
+        通常配合 read(key) 逐条取样本。&quot;&quot;&quot;
+
+    def __del__(self):
+        &quot;&quot;&quot;Recycle resources.
+        析构方法：对象被 Python 垃圾回收（引用计数归零 / 解释器退出）时
+        自动调用，这里调用 self.close() 兜底释放资源。
+        目的：即使用户代码忘记显式 close()，也能在对象销毁时尽量完成
+        提交与关闭，防止数据丢失和句柄泄漏。
+        注意：__del__ 的调用时机不可靠（循环引用、解释器退出时可能不执行），
+        所以这只是&quot;兜底保险&quot;，正常流程仍应显式调用 close()。&quot;&quot;&quot;
+        self.close()
+
+    def __len__(self):
+        &quot;&quot;&quot;Get the length.
+        返回文件中记录的总条数。
+        实现了 __len__ 后即可使用内置 len(obj) 语法，
+        也使对象能被 bool() 判断（非空即 True）并参与一些期望 Sized
+        协议的框架代码。&quot;&quot;&quot;
+
+
+class Lmdb(PackType):
+    &quot;&quot;&quot;Class of LMDB, which include all operators.
+
+    ────────────────────────────────────────────────────────────────────
+    【角色】PackType 的 LMDB 具体实现，包含 LMDB 文件的全部读写操作。
+    ────────────────────────────────────────────────────────────────────
+
+    Args:
+        uri: Path to lmdb file.
+            LMDB 路径。注意 lmdb.open 接收的是&quot;目录&quot;路径：
+            打开/创建后该目录下会出现 data.mdb（数据文件）和
+            lock.mdb（写锁文件）两个文件。
+        writable: Writable flag for opening LMDB.
+            - True（默认）：写模式，用于打包数据集；
+            - False：只读模式，用于训练时读取。内部会自动追加
+              readonly=True / lock=False 两个 lmdb 参数（见 __init__），
+              不加文件锁，从而允许 DataLoader 多个 worker 进程并发读。
+        flush_before_write: Whether to reopen file while writing.
+            写之前是否需要重新打开文件的标志位。（本实现中仅保存该
+            标志，未在写路径上强制执行，属于预留参数。）
+        commit_step: The step for commit.
+            每写入多少条记录执行一次事务提交，默认 5000。
+            为什么需要分批提交：
+              LMDB 中一次事务的所有修改先落在空闲页，commit 时才真正
+              生效；单个事务过大 → 占用的磁盘空间和内存都会膨胀，
+              提交本身也变慢。分批提交把事务尺寸控制在常数级别；
+              同时已提交的数据即时持久化，异常中断时最多丢失最近
+              不足 commit_step 条的数据。
+        kwargs: Kwargs for open lmdb file.
+            其他透传给 lmdb.open() 的关键字参数，可覆盖下方
+            &quot;default lmdb settings&quot; 中的任何默认值。
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        uri: str,
+        writable: bool = True,
+        flush_before_write: bool = False,
+        commit_step: int = 5000,
+        **kwargs,
+    ):
+        # ---- 1. 保存基础配置 ----
+        self.uri = uri                      # LMDB 目录路径，open/close/reset 时使用
+        self.writable = writable            # 读写模式标志，决定事务以 write=True/False 开启
+        self.flush_before_write = flush_before_write  # 预留标志位（见类 docstring）
+        self.kwargs = kwargs                # lmdb.open 的原始参数字典（含用户自定义）
+
+        # ---- 2. 填充 LMDB 默认参数（用户已显式传入的优先，不覆盖）----
+        # dict.get(key, default): key 存在则返回已有值，否则返回 default。
+        # 由此实现&quot;默认值 + 可被 kwargs 覆盖&quot;的参数机制。
+
+        # map_size: 数据库文件映射空间上限（字节）。
+        # LMDB 必须预先声明最大容量（mmap 区域大小），写入总量不能超过它。
+        # 默认 1024**4 = 1TB，给到足够大，免去用户估算数据集大小的负担。
+        self.kwargs[&quot;map_size&quot;] = self.kwargs.get(&quot;map_size&quot;, 1024**4)
+        # meminit: 为 False 表示 mmap 时不用 0 预填充新写入的内存页，
+        # 可以显著加快首次写入大 map_size 时的初始化速度。
+        self.kwargs[&quot;meminit&quot;] = self.kwargs.get(&quot;meminit&quot;, False)
+        # map_async: 为 True 时使用 MDB_MAPASYNC，flush 操作交给后台异步执行，
+        # 配合下面的 sync=False 组成高性能写入配置。
+        self.kwargs[&quot;map_async&quot;] = self.kwargs.get(&quot;map_async&quot;, True)
+        # sync: 为 False 表示 commit 后不立刻 fsync 强制刷盘，
+        # 数据先缓存在操作系统页缓存中，写入吞吐更高；
+        # 代价：断电等极端情况下可能丢失最后一批数据（打包场景可接受，
+        # close() 中会显式调用 env.sync() 做最终落盘）。
+        self.kwargs[&quot;sync&quot;] = self.kwargs.get(&quot;sync&quot;, False)
+        if not writable:
+            # 只读模式的两个关键参数：
+            # readonly=True: 以只读方式打开，若文件不存在会直接报错
+            #               （避免误创建空库导致读到空数据）；
+            # lock=False:   不获取文件锁。这是多进程并发读的必要条件——
+            #               若加锁，DataLoader 的多个 worker 会互相阻塞。
+            self.kwargs[&quot;readonly&quot;] = True
+            self.kwargs[&quot;lock&quot;] = False
+
+        # ---- 3. 初始化句柄并打开文件 ----
+        # LMDB 两级核心句柄：
+        #   env: Environment 环境句柄 —— 对应整个 LMDB 文件（mmap 映射），
+        #        一个 env 下可开多个事务；
+        #   txn: Transaction 事务句柄 —— LMDB 的所有读写都必须在事务中进行，
+        #        写事务需要显式 commit 才生效，读事务随用随开。
+        # 先置 None，open() 内部判断 env is None 才真正执行打开（幂等）。
+        self.env = None
+        self.txn = None
+        self.open()                  # 打开 env（写模式此时不开事务，写入时懒加载）
+        if not self.writable:
+            # 只读模式构造时立即建立读事务，后续 get/read 直接可用；
+            # 写模式不提前开事务，等第一次 write 时再建（懒加载，
+            # 也避免空库时白开一个写事务占用资源）。
+            self._create_txn()
+        # ---- 4. 写入侧的批次控制状态 ----
+        self.commit_step = commit_step  # 每多少条 commit 一次
+        self.put_idx = 0                # 自构造以来累计写入的条数，
+                                        # 用于 write() 中判断是否到达提交点
+
+    def read(self, idx: Union[int, str]) -&gt; bytes:
+        &quot;&quot;&quot;Read data by idx.
+        按索引读取一条记录（对外接口，带异常日志）。
+
+        参数 idx 允许两种类型（Union[int, str]）：
+            int  —— 常规样本序号，如 read(0)、read(123)；
+            str  —— 字符串 key，如 read(&quot;__len__&quot;) 读打包时写入的总数。
+
+        key 的编码约定：&quot;{}&quot;.format(idx).encode(&quot;ascii&quot;)
+            先把 idx 格式化为字符串（123 -&gt; &quot;123&quot;），
+            再编码成 ascii bytes（&quot;123&quot; -&gt; b&quot;123&quot;）。
+            LMDB 的 key 必须是 bytes；写入(write)和读取(read/get)使用
+            完全相同的编码，保证两侧 key 一致才能命中。
+        &quot;&quot;&quot;
+        idx = &quot;{}&quot;.format(idx).encode(&quot;ascii&quot;)
+        try:
+            return self.get(idx)     # 委托给带超时的底层 get 方法
+        except TimeoutError as exception:
+            # 捕获的是 timeout_decorator 抛出的超时异常（非内置 TimeoutError）。
+            # 先用 logger.error 记录上下文（哪个 key、哪个文件），
+            # 再原样 raise 让上层感知并决定重试或终止。
+            logger.error(
+                f&quot;Time out when reading data with index of &quot;
+                f&quot;{idx} from {self.uri}&quot;
+            )
+            raise exception
+
+    @timeout(seconds=600)  # 读操作 600 秒（10 分钟）硬超时，防 NFS 挂死
+    def get(self, idx: Union[int, str]) -&gt; bytes:
+        &quot;&quot;&quot;底层读取方法（类内部使用，带超时装饰器）。
+        idx 此时已是编码好的 bytes key。
+        若事务句柄不存在（从未创建 / close 后被清空），先懒加载重建，
+        再执行 txn.get(key) 返回对应 value（bytes）；key 不存在时返回 None。&quot;&quot;&quot;
+        if self.txn is None:
+            self._create_txn()
+        return self.txn.get(idx)
+
+    def write(self, idx: Union[int, str], record: bytes):
+        &quot;&quot;&quot;Write data into lmdb file.
+        写入一条记录（打包数据集的核心方法）。
+
+        执行流程（逐步）：
+          ① 懒加载恢复：若 env 为 None（曾被 close），重新打开文件；
+          ② 懒加载事务：若 txn 为 None，创建新事务；
+          ③ 编码写入：idx 统一转 ascii bytes 作 key，txn.put 写入当前事务；
+          ④ 计数：put_idx 累加，记录本事务周期内已写条数；
+          ⑤ 分批提交：每写满 commit_step 条（put_idx 能被整除）执行
+             txn.commit() 使数据真正生效，随后 env.begin() 开启新事务
+             继续接收后续写入（旧事务 commit 后不可再使用）。
+        &quot;&quot;&quot;
+        if self.env is None:
+            self.open()              # ① close 之后再次 write，自动重开
+        if self.txn is None:
+            self._create_txn()       # ② 无事务则建事务
+        # ③ key 编码与 read 完全一致；record 是完整的样本 bytes
+        self.txn.put(&quot;{}&quot;.format(idx).encode(&quot;ascii&quot;), record)
+        self.put_idx += 1            # ④ 累计写入计数
+        if self.put_idx % self.commit_step == 0:
+            # ⑤ 到达提交点：% 取模为 0 说明刚写满一批（5000 条），
+            #    commit 后旧事务生命周期结束，必须重新 begin 一个新事务。
+            self.txn.commit()
+            self.txn = self.env.begin(write=self.writable)
+
+    @timeout(seconds=600)  # 打开操作 600 秒硬超时：网络存储挂载故障时不至于无限等待
+    def open_lmdb(self):
+        &quot;&quot;&quot;真正调用 lmdb.open 的地方（被 @timeout 包装）。
+        把 lmdb.open 单独抽成一个方法，是为了让超时装饰器只作用于
+        这一个系统调用——装饰 open() 整个方法会连带把内部逻辑一起计时，
+        粒度不够精确。&quot;&quot;&quot;
+        return lmdb.open(self.uri, **self.kwargs)
+
+    def open(self):
+        &quot;&quot;&quot;Open lmdb file.
+        打开 LMDB 环境（对外接口，幂等）。
+        仅当 env 为 None（尚未打开 / 已被 close）时才真正执行 open，
+        重复调用不会重复打开，也不会产生句柄泄漏。&quot;&quot;&quot;
+        if self.env is None:
+            try:
+                self.env = self.open_lmdb()   # 拿到 Environment 句柄
+            except TimeoutError as exception:
+                # 打开超时（典型于 NFS 故障/文件被异常挂起）：记录日志后上抛
+                logger.error(f&quot;Time out when opening {self.uri}&quot;)
+                raise exception
+
+    def _create_txn(self):
+        &quot;&quot;&quot;Create lmdb transaction.（内部方法，下划线开头表示类内部使用）
+        创建事务句柄，两级保证：
+          ① env 未打开则先打开（事务必须依附于环境）；
+          ② txn 为 None 时才创建，按 self.writable 决定事务类型：
+             写模式  -&gt; env.begin(write=True)  写事务，需 commit 生效；
+             只读模式-&gt; env.begin(write=False) 读事务，用完即弃。&quot;&quot;&quot;
+        if self.env is None:
+            self.open()
+        if self.txn is None:
+            self.txn = self.env.begin(write=self.writable)
+
+    def close(self):
+        &quot;&quot;&quot;Close lmdb file.
+        关闭 LMDB 文件（对外接口，幂等）。
+
+        写模式下的完整收尾流程（保证数据不丢）：
+          ① 判断 env 存在才有得关（幂等：未打开直接跳过）；
+          ② 写模式下若事务存在：
+             - put_idx % commit_step != 0 说明最后一批不满 5000 条、
+               尚未 commit，这里补一次 commit 把尾部数据落库；
+             - put_idx 清零，支持 close 后重新打开继续写的场景；
+             - env.sync() 强制 fsync 刷盘 —— 弥补构造时 sync=False 的
+               异步配置，确保进程退出前数据真正写入磁盘。
+          ③ env.close() 关闭映射并释放资源，句柄全部置 None，
+             触发后续 read/write 的懒加载重开逻辑。&quot;&quot;&quot;
+        if self.env is not None:                         # ① 幂等保护
+            if self.writable and self.txn is not None:   # ② 仅写模式需要收尾
+                if self.put_idx % self.commit_step != 0:
+                    self.txn.commit()                    # ② 补交尾部数据
+                self.put_idx = 0                         # ② 计数复位
+                self.env.sync()                          # ② 强制刷盘
+            self.env.close()                             # ③ 关闭环境
+            self.env = None
+            self.txn = None
+
+    def reset(self):
+        &quot;&quot;&quot;Reset open file.
+        重置文件句柄（异常恢复手段）。
+
+        分支逻辑：
+          - env 和 txn 都为 None：说明文件根本没打开，直接 open 打开即可；
+          - 否则（任一不为 None）：先 close（写模式会先 commit+sync，
+            保证已有数据安全）再 open，最终得到一个全新的、干净的句柄。
+        使用场景：长时间运行中句柄失效（NFS 断连、超时后状态可疑），
+        或者想要&quot;清空缓冲、从头开始&quot;的状态。&quot;&quot;&quot;
+        if self.env is None and self.txn is None:
+            self.open()
+        else:
+            self.close()
+            self.open()
+
+    def get_keys(self):
+        &quot;&quot;&quot;Get all keys.
+        获取全部可读 key（读取侧建立索引用）。
+
+        两级策略（fast path / slow path）：
+          快路径 —— 读取特殊 key &quot;__len__&quot;（编码为 b&#x27;__len__&#x27;）。
+              部分打包工具会在收尾时写入总条数（如 write(&quot;__len__&quot;, b&quot;10000&quot;)）。
+              若该 key 存在，直接返回 range(N) —— 即 [0, 1, ..., N-1]，
+              因为打包时 key 就是连续整数，无需真正遍历数据库，开销 O(1)。
+          慢路径 —— 若快路径抛任何异常（key 不存在返回 None，
+              int(None) 会抛 TypeError），则用 cursor 游标逐条迭代
+              整个数据库收集真实 key 列表。注释也点明了：
+              key 数量很大时全量遍历可能很慢，所以才优先走快路径。
+        &quot;&quot;&quot;
+        if self.txn is None:
+            self._create_txn()          # 保证有可用事务
+        try:
+            idx = &quot;{}&quot;.format(&quot;__len__&quot;).encode(&quot;ascii&quot;)  # -&gt; b&#x27;__len__&#x27;
+            # txn.get 返回 bytes（如 b&#x27;10000&#x27;），int() 还原为整数 N，
+            # range(N) 是惰性序列，不占内存。
+            return range(int(self.txn.get(idx)))
+        except Exception:
+            # traversal may be slow while too much keys
+            # 游标迭代：yield (key, value) 对，这里只要 key 不要 value。
+            # 返回的 key 是原始 bytes（如 b&#x27;0&#x27;, b&#x27;1&#x27; ...），
+            # 调用方需自行处理类型（read() 对 str/bytes 的 format 结果一致，
+            # 所以 bytes key 也能直接传给 read）。
+            keys = []
+            for key, _value in self.txn.cursor():
+                keys.append(key)
+            return keys
+
+    def __len__(self):
+        &quot;&quot;&quot;Get the length.
+        返回数据集总条数（实现了它就可以直接 len(db)）。
+
+        两级策略与 get_keys 一致：
+          快路径 —— 读特殊 key &quot;__len__&quot; 里存的条数；
+          慢路径 —— 快路径失败时改用 LMDB 内置统计：
+                    txn.stat()[&quot;entries&quot;] 返回数据库中的 key 总数。
+                    注意：entries 统计所有 key，若打包时额外写入过
+                    &quot;__len__&quot; 这类元数据 key，结果会比真实样本数多 1，
+                    属于已知的小误差。&quot;&quot;&quot;
+        if self.txn is None:
+            self._create_txn()
+        try:
+            idx = &quot;{}&quot;.format(&quot;__len__&quot;).encode(&quot;ascii&quot;)
+            return int(self.txn.get(idx))
+        except Exception:
+            # stat() 返回字典：{&quot;entries&quot;: 条数, &quot;psize&quot;: 页大小, ...}
+            return self.txn.stat()[&quot;entries&quot;]
+
+    def __getstate__(self):
+        &quot;&quot;&quot;pickle 序列化钩子（配合 multiprocessing / DataLoader 使用）。
+
+        触发时机：对象被 pickle.dumps 或跨进程传递（如作为 DataLoader
+        dataset 被发到 worker 进程）时自动调用。
+
+        为什么必须实现：
+          lmdb 的 env/txn 底层是 C 指针和 mmap 映射，属于进程私有资源，
+          无法被序列化——直接 pickle 会失败或产生悬空指针。
+
+        做法：返回 self.__dict__（包含 uri/writable/kwargs 等纯配置，
+        以及此时仍非 None 的 env/txn 引用），但返回前先调用 self.close()。
+        注意 close() 会把 self.__dict__ 里的 env/txn 置为 None，因此
+        实际被序列化的状态中句柄已是 None，子进程收到后不会拿到
+        任何失效的 C 指针。&quot;&quot;&quot;
+        state = self.__dict__
+        self.close()      # 关闭本进程的句柄（数据已 commit+sync，安全）
+        return state      # state[&quot;env&quot;]/state[&quot;txn&quot;] 此时均为 None
+
+    def __setstate__(self, state):
+        &quot;&quot;&quot;pickle 反序列化钩子（__getstate__ 的逆操作）。
+
+        触发时机：子进程 unpickle 还原本对象时自动调用。
+        做法：先恢复全部属性字典，再调用 self.open() 在【当前进程】
+        重新打开 LMDB 文件、重建自己的 env 句柄（只读模式下 open 后
+        需要的读事务会在首次 get 时通过 _create_txn 懒加载建立）。
+        由此保证每个进程持有独立的、指向同一文件的合法句柄，
+        配合 readonly+lock=False 实现多进程安全并发读。&quot;&quot;&quot;
+        self.__dict__ = state
+        self.open()
+
+
+# ══════════════════════════════════════════════════════════════════
+# 【调试 / 自测部分】复现打包 mdb 流程 + 校验打包结果
+# 用法：
+#   # 1) 全流程自测：模拟打包 -&gt; 只读校验 -&gt; 边界行为测试
+#   python lmdb_base.py
+#   # 2) 校验一份真实的打包 mdb 产物（目录，含 data.mdb / lock.mdb）
+#   python lmdb_base.py --check /path/to/xxx.lmdb
+# ══════════════════════════════════════════════════════════════════
+import argparse
+import os
+import pickle
+import shutil
+
+
+def mock_pack(lmdb_dir: str, num_samples: int = 23, commit_step: int = 5):
+    &quot;&quot;&quot;模拟真实打包脚本的行为：
+    - 写模式打开（writable=True）
+    - 以连续整数 idx 为 key 逐条写入样本 bytes
+    - 收尾写入 &quot;__len__&quot; 记录总条数
+    - close() 触发尾部 commit + sync 落盘
+
+    commit_step 故意设小（5），验证 write() 的分批提交逻辑：
+    23 条数据会触发 4 次 commit（5/10/15/20），最后 3 条由 close 补交。
+    &quot;&quot;&quot;
+    if os.path.exists(lmdb_dir):
+        shutil.rmtree(lmdb_dir)  # lmdb.open 要求目录不存在或为空
+
+    db = Lmdb(lmdb_dir, writable=True, commit_step=commit_step)
+    for i in range(num_samples):
+        # 真实场景这里是 &quot;图片二进制 + 标注序列化&quot; 后的 bytes，
+        # debug 用带 magic header 的假数据即可
+        record = b&quot;FAKE_JPEG_MAGIC&quot; + b&quot;sample-%04d&quot; % i
+        db.write(i, record)
+    db.write(&quot;__len__&quot;, str(num_samples).encode(&quot;ascii&quot;))
+    db.close()
+    logger.info(f&quot;[pack] 写入完成: {num_samples} 条 + __len__, 目录: {lmdb_dir}&quot;)
+    logger.info(
+        f&quot;[pack] 目录内容: {sorted(os.listdir(lmdb_dir))}&quot;
+        f&quot;  (应为 data.mdb + lock.mdb)&quot;
+    )
+
+
+def verify(lmdb_dir: str, num_samples: int = 23):
+    &quot;&quot;&quot;读取校验（读侧，模拟训练 dataloader 视角）。&quot;&quot;&quot;
+    db = Lmdb(lmdb_dir, writable=False)  # readonly + lock=False
+
+    # ---- 1. len()：走 __len__ 快路径 ----
+    total = len(db)
+    assert total == num_samples, f&quot;len 失败: {total} != {num_samples}&quot;
+    logger.info(f&quot;[read] len(db) = {total}  ✓ 走 __len__ 快路径&quot;)
+
+    # ---- 2. get_keys()：走 __len__ 快路径，返回 range(N) ----
+    keys = list(db.get_keys())
+    assert keys == list(range(num_samples)), f&quot;keys 异常: {keys[:5]}...&quot;
+    logger.info(f&quot;[read] get_keys() = range({num_samples})  ✓&quot;)
+
+    # ---- 3. 逐条读取并校验内容 ----
+    for i in range(num_samples):
+        record = db.read(i)
+        expect = b&quot;FAKE_JPEG_MAGIC&quot; + b&quot;sample-%04d&quot; % i
+        assert record == expect, f&quot;第 {i} 条内容不一致: {record!r}&quot;
+    logger.info(f&quot;[read] {num_samples} 条全部读出且内容一致  ✓&quot;)
+
+    # ---- 4. 读 __len__ 元数据 key（str 类型的 idx）----
+    meta = db.read(&quot;__len__&quot;)
+    assert meta == str(num_samples).encode(), f&quot;__len__ 值异常: {meta!r}&quot;
+    logger.info(f&quot;[read] read(&#x27;__len__&#x27;) = {meta}  ✓&quot;)
+
+    # ---- 5. 读不存在的 key：txn.get 返回 None（不抛异常）----
+    missing = db.read(99999)
+    assert missing is None, &quot;不存在的 key 应返回 None&quot;
+    logger.info(&quot;[read] read(99999) = None  ✓&quot;)
+
+    db.close()
+
+
+def test_edge_cases(lmdb_dir: str):
+    &quot;&quot;&quot;边界行为测试（debug 打包问题时常用）。&quot;&quot;&quot;
+    # ---- a. close 后继续 write：懒加载自动重开 ----
+    db = Lmdb(lmdb_dir, writable=True)
+    db.close()
+    db.write(100, b&quot;after-close-record&quot;)   # 不应报错
+    db.write(&quot;__len__&quot;, b&quot;24&quot;)
+    db.close()
+    logger.info(&quot;[edge] close 后 write 自动重开  ✓&quot;)
+
+    db_ro = Lmdb(lmdb_dir, writable=False)
+    assert db_ro.read(100) == b&quot;after-close-record&quot;
+    assert len(db_ro) == 24
+    db_ro.close()
+    logger.info(&quot;[edge] 追加写入的数据可读  ✓&quot;)
+
+    # ---- b. reset()：句柄重置后数据仍在 ----
+    db_ro = Lmdb(lmdb_dir, writable=False)
+    db_ro.reset()
+    assert db_ro.read(0) is not None
+    db_ro.close()
+    logger.info(&quot;[edge] reset() 后句柄可用  ✓&quot;)
+
+    # ---- c. get_keys() 慢路径：删掉 __len__ 元数据后走 cursor 遍历 ----
+    raw = lmdb.open(lmdb_dir, readonly=False, lock=True, map_size=1024**4)
+    with raw.begin(write=True) as txn:
+        txn.delete(b&quot;__len__&quot;)
+    raw.close()
+
+    db_ro = Lmdb(lmdb_dir, writable=False)
+    keys = list(db_ro.get_keys())          # 慢路径，返回 bytes key
+    assert b&quot;0&quot; in keys and b&quot;100&quot; in keys
+    n_entries = len(db_ro)                 # 慢路径走 stat()[&quot;entries&quot;]
+    logger.info(
+        f&quot;[edge] 无 __len__ 时 cursor 慢路径: {len(keys)} 个 key, &quot;
+        f&quot;len()={n_entries} (stat entries, 含全部 key)  ✓&quot;
+    )
+    db_ro.close()
+
+    # ---- d. pickle 跨进程传递（DataLoader worker 场景）----
+    db_ro = Lmdb(lmdb_dir, writable=False)
+    dumped = pickle.dumps(db_ro)
+    db_ro2 = pickle.loads(dumped)
+    assert db_ro2.read(0) is not None
+    logger.info(&quot;[edge] pickle 序列化/反序列化后句柄独立可用  ✓&quot;)
+    db_ro.close()
+    db_ro2.close()
+
+
+def check_real_lmdb(lmdb_dir: str, sample_count: int = 5):
+    &quot;&quot;&quot;对一个真实的打包 mdb 目录做体检：
+    - 文件完整性（data.mdb / lock.mdb）
+    - 总条数（__len__ 快路径 vs stat entries 慢路径，两者差值=元数据 key 数）
+    - 抽样读取若干条，检查是否为 None（丢数据）及 JPEG magic
+    &quot;&quot;&quot;
+    assert os.path.isdir(lmdb_dir), f&quot;目录不存在: {lmdb_dir}&quot;
+    files = os.listdir(lmdb_dir)
+    logger.info(f&quot;[check] 目录内容: {files}&quot;)
+    if &quot;data.mdb&quot; not in files:
+        logger.warning(&quot;[check] ⚠ 缺少 data.mdb，可能是异常产物！&quot;)
+    size_mb = os.path.getsize(os.path.join(lmdb_dir, &quot;data.mdb&quot;)) / 1024**2
+    logger.info(f&quot;[check] data.mdb 大小: {size_mb:.1f} MB&quot;)
+
+    db = Lmdb(lmdb_dir, writable=False)
+
+    # __len__ 元数据
+    meta = db.read(&quot;__len__&quot;)
+    logger.info(f&quot;[check] __len__ = {meta}&quot;)
+
+    # stat 统计（含全部 key）
+    if db.txn is None:
+        db._create_txn()
+    entries = db.txn.stat()[&quot;entries&quot;]
+    logger.info(f&quot;[check] stat entries = {entries} &quot;
+                f&quot;(与 __len__ 差值即元数据 key 个数)&quot;)
+
+    keys = list(db.get_keys())
+    logger.info(f&quot;[check] 可读 key 数量: {len(keys)}, &quot;
+                f&quot;前 5 个: {keys[:5]}, 后 5 个: {keys[-5:]}&quot;)
+
+    # 抽样读取（首/中/尾）
+    int_keys = sorted(int(k) for k in keys if str(k).isdigit())
+    if int_keys:
+        picks = [int_keys[0], int_keys[len(int_keys) // 2], int_keys[-1]]
+        picks += int_keys[: max(0, sample_count - len(picks))]
+        for k in picks:
+            rec = db.read(k)
+            if rec is None:
+                logger.error(f&quot;[check] ✗ key={k} 读取为 None，疑似丢数据！&quot;)
+            else:
+                is_jpeg = rec[:3] == b&quot;\xff\xd8\xff&quot;
+                logger.info(
+                    f&quot;[check] key={k}: {len(rec)} bytes, &quot;
+                    f&quot;JPEG magic: {is_jpeg}, head16: {rec[:16]!r}&quot;
+                )
+
+    db.close()
+    logger.info(&quot;[check] 完成&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    logging.basicConfig(
+        level=logging.INFO,
+        format=&quot;%(asctime)s - %(levelname)s - %(message)s&quot;,
+    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        &quot;--check&quot;, type=str, default=None,
+        help=&quot;要校验的真实打包 mdb 目录（不传则跑本地 mock 全流程自测）&quot;,
+    )
+    parser.add_argument(&quot;--out&quot;, type=str, default=&quot;./tmp/debug_lmdb_test&quot;)
+    parser.add_argument(&quot;--num&quot;, type=int, default=23)
+    args = parser.parse_args()
+
+    if args.check:
+        check_real_lmdb(args.check)
+    else:
+        logger.info(&quot;═══ 1. 模拟打包（写侧）═══&quot;)
+        mock_pack(args.out, num_samples=args.num, commit_step=5)
+        logger.info(&quot;═══ 2. 只读校验（读侧）═══&quot;)
+        verify(args.out, num_samples=args.num)
+        logger.info(&quot;═══ 3. 边界行为测试 ═══&quot;)
+        test_edge_cases(args.out)
+        logger.info(f&quot;═══ 全部通过 ✓  测试目录: {args.out} ═══&quot;)
+</pre></div>
+</section>
+
+</main>
+</div>
+<div class="pgno" id="pgno"></div>
+<button class="back-top" id="backTop" title="回到顶部">回到顶部</button>
+<div class="kbd-hint">← → 翻页 · 数字键跳转</div>
+
+<script>
+  const pages = [...document.querySelectorAll('.page')]
+  const toc = document.getElementById('toc')
+  const pgno = document.getElementById('pgno')
+  let cur = 0
+
+  // 从 data-page 属性生成目录
+  const titles = [
+    ['00', '自我介绍'],
+    ['01', '动态感知数据闭环 ★'],
+    ['02', '小动物检测专题'],
+    ['03', '锥桶数据挖掘'],
+    ['04', 'Agent Skill 服务'],
+    ['05', '刑侦 · 电诈资金分析'],
+    ['06', '算法题速览'],
+    ['07', '反问 & 临场提醒'],
+    ['08', 'LMDB 打包读写封装'],
+  ]
+  pages.forEach((p, i) => {
+    const b = document.createElement('button')
+    b.innerHTML = `<span class="no">${titles[i][0]}</span>${titles[i][1]}`
+    b.onclick = () => go(i)
+    // 插在 toc-foot 之前
+    toc.insertBefore(b, toc.querySelector('.toc-foot'))
+  })
+  const tocBtns = [...toc.querySelectorAll('button:not(.toc-toggle):not(.toc-strip button)')]
+
+  // 目录收起：窄条编号直达 + 切换按钮
+  const tocToggle = document.getElementById('tocToggle')
+  const tocStrip = document.getElementById('tocStrip')
+  const stripBtns = titles.map(([no, t], i) => {
+    const b = document.createElement('button')
+    b.textContent = no
+    b.title = t
+    b.onclick = () => go(i)
+    tocStrip.appendChild(b)
+    return b
+  })
+  tocToggle.addEventListener('click', () => {
+    toc.classList.toggle('collapsed')
+    const collapsed = toc.classList.contains('collapsed')
+    tocToggle.textContent = collapsed ? '⟩' : '⟨'
+    tocToggle.title = collapsed ? '展开目录' : '收起目录'
+  })
+
+  // 手机端翻页栏：下拉框填充 + 事件
+  const mPrev = document.getElementById('mPrev')
+  const mNext = document.getElementById('mNext')
+  const mSel = document.getElementById('mSel')
+  titles.forEach(([no, t], i) => {
+    const opt = document.createElement('option')
+    opt.value = i
+    opt.textContent = `${no} · ${t}`
+    mSel.appendChild(opt)
+  })
+  mPrev.onclick = () => go(cur - 1)
+  mNext.onclick = () => go(cur + 1)
+  mSel.onchange = () => go(Number(mSel.value))
+
+  function go(i) {
+    if (i < 0 || i >= pages.length) return
+    pages[cur].classList.remove('active')
+    tocBtns[cur].classList.remove('active')
+    stripBtns[cur].classList.remove('active')
+    cur = i
+    pages[cur].classList.add('active')
+    tocBtns[cur].classList.add('active')
+    stripBtns[cur].classList.add('active')
+    pages[cur].scrollTop = 0
+    pgno.textContent = `${cur + 1} / ${pages.length}`
+    // 手机端翻页栏同步
+    mPrev.disabled = cur === 0
+    mNext.disabled = cur === pages.length - 1
+    if (mSel.selectedIndex !== cur) mSel.selectedIndex = cur
+    // 确保当前页内的高亮按钮可见
+    tocBtns[cur].scrollIntoView?.({ block: 'nearest' })
+    updateBackTop()
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') go(cur + 1)
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1)
+    else if (/^[0-9]$/.test(e.key)) go(Number(e.key) % pages.length)
+  })
+
+  // 算法页索引：卡片头点击展开/收起；函数名/跳转按钮点击滚动到对应代码
+  function scrollToSel(sel) {
+    const target = document.querySelector(sel)
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  document.querySelectorAll('.algo-card').forEach((card) => {
+    card.querySelector('.card-head').addEventListener('click', () => {
+      card.classList.toggle('open')
+    })
+    card.querySelectorAll('.card-body a').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault()
+        scrollToSel(a.getAttribute('href'))
+      })
+    })
+    const jump = card.querySelector('.jump')
+    jump.addEventListener('click', (e) => {
+      e.stopPropagation()
+      scrollToSel('#' + jump.dataset.sec)
+    })
+  })
+
+  // 代码块一键复制：每个 .code pre 自动挂一个按钮
+  // clipboard API 在 http/file 协议下可能不可用，降级用隐藏 textarea + execCommand
+  document.querySelectorAll('.code pre').forEach((pre) => {
+    const btn = document.createElement('button')
+    btn.className = 'copy-btn'
+    btn.textContent = '复制代码'
+    btn.title = '一键复制全部代码'
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const text = pre.innerText
+      let ok = false
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text)
+          ok = true
+        }
+      } catch (_) { /* 走降级 */ }
+      if (!ok) {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.cssText = 'position:fixed;opacity:0;left:-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        try { ok = document.execCommand('copy') } catch (_) {}
+        ta.remove()
+      }
+      btn.textContent = ok ? '已复制 ✓' : '复制失败'
+      btn.classList.toggle('done', ok)
+      setTimeout(() => {
+        btn.textContent = '复制代码'
+        btn.classList.remove('done')
+      }, 1600)
+    })
+    pre.appendChild(btn)
+  })
+
+  // 回到顶部：仅算法页且已向下滚动时显示
+  const backTop = document.getElementById('backTop')
+  function updateBackTop() {
+    const active = pages[cur]
+    const onAlgoPage = active.querySelector('.algo-toc') !== null
+    backTop.classList.toggle('show', onAlgoPage && active.scrollTop > 300)
+  }
+  pages.forEach((p) => p.addEventListener('scroll', updateBackTop, { passive: true }))
+  backTop.addEventListener('click', () => {
+    pages[cur].scrollTo({ top: 0, behavior: 'smooth' })
+  })
+
+  // 触摸滑动翻页（手机端）：仅在当前页已滚到顶/底时触发，避免和滚动打架
+  let touchX = 0, touchY = 0
+  document.addEventListener('touchstart', (e) => {
+    touchX = e.touches[0].clientX
+    touchY = e.touches[0].clientY
+  }, { passive: true })
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchX
+    const dy = e.changedTouches[0].clientY - touchY
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    const p = pages[cur]
+    const atTop = p.scrollTop <= 0
+    const atBottom = p.scrollTop + p.clientHeight >= p.scrollHeight - 2
+    // 向左滑（下一页）需在底部，向右滑（上一页）需在顶部
+    if (dx < 0 && atBottom) go(cur + 1)
+    else if (dx > 0 && atTop) go(cur - 1)
+  }, { passive: true })
+
+  // 初始
+  go(0)
+</script>
+</body>
+</html>
