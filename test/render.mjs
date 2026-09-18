@@ -113,7 +113,7 @@ ok('中文内容已打包', jsAll.includes('赫卫东'))
 ok('读数值不转大写', css.includes('.pn-v') && /\.pn-v\s*\{[^}]*text-transform:\s*none/.test(css))
 
 ok('英文内容已打包', jsAll.includes('He Weidong'))
-ok('项目内容已打包', jsAll.includes('基攻宝'))
+ok('项目内容已打包', jsAll.includes('锥桶数据挖掘'))
 ok('GitHub 链接正确', jsAll.includes('github.com/L-newbie'))
 ok('着色器已打包', jsAll.includes('gl_PointSize'))
 ok('降级逻辑存在', jsAll.includes('experimental-webgl'))
