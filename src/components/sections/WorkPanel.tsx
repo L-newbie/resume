@@ -11,26 +11,28 @@ import { IconArrow, IconClose } from '../Icons'
  * ⚠️ 不一次把所有卡片铺出来。三级内容同屏堆叠时，屏幕上是
  * 十几个并列的块，层级关系反而被淹没。改成**逐级下钻**：
  *
- *   第一屏  两个来源节点（企业项目 / 开源项目）
- *   选中后  展开该来源下的分支（企业 → 各公司；开源 → 直接到项目）
+ *   第一屏  来源节点（企业项目）
+ *   选中后  展开该来源下的分支（企业 → 各公司）
  *   再选中  展开该分支下的项目卡片
  *
  * 左侧始终保留一条已选路径（面包屑式的节点链），
  * 随时能回到上一级重选 —— 树的形状靠「路径 + 当前层」表达，
  * 而不是靠把整棵树画出来。
+ *
+ * ⚠️ 曾经还有一支「开源项目」分支；唯一的开源项目（基攻宝）
+ * 删除后这支只剩空壳，连带拆掉 —— 数据层不再有 kind:'oss' 的项目。
  */
 export function WorkPanel() {
   const lang = useApp((s) => s.lang)
   const [openId, setOpenId] = useState<string | null>(null)
-  /** 当前下钻到的来源：'internal' | 'oss' | null */
+  /** 当前下钻到的来源：'internal' | null */
   const [source, setSource] = useState<Src | null>(null)
-  /** 当前下钻到的公司（仅企业项目这一支有） */
+  /** 当前下钻到的公司 */
   const [company, setCompany] = useState<string | null>(null)
 
   const open = PROJECTS.find((p) => p.id === openId) ?? null
 
   const internal = PROJECTS.filter((p) => p.kind === 'internal')
-  const oss = PROJECTS.filter((p) => p.kind === 'oss')
 
   /** 企业项目按公司分组。Map 保持插入顺序 → 天然是时间序 */
   const companies = new Map<string, typeof PROJECTS>()
@@ -43,11 +45,9 @@ export function WorkPanel() {
 
   /** 当前这一层要显示的项目卡片；还没钻到底就是 null */
   const shown: typeof PROJECTS | null =
-    source === 'oss'
-      ? oss
-      : source === 'internal' && company
-        ? (companies.get(company) ?? [])
-        : null
+    source === 'internal' && company
+      ? (companies.get(company) ?? [])
+      : null
 
   const t = (zh: string, en: string) => (lang === 'zh' ? zh : en)
 
@@ -86,10 +86,9 @@ export function WorkPanel() {
             <>
               <span className="wk-path-link" aria-hidden="true" />
               <button
-                className={`wk-node${!company ? ' is-on' : ''}${source === 'oss' ? ' is-oss' : ''}`}
+                className={`wk-node${!company ? ' is-on' : ''}`}
                 /*
-                  ⚠️ 开源分支下没有公司层，此时这个节点**已经是当前层**，
-                  点它只 setCompany(null) 等于什么都没发生。
+                  ⚠️ 点这个节点在没有 company 时等于什么都没发生。
                   改为退回上一级（根）—— 每个可点的节点都必须有实际去处。
                 */
                 onClick={() => {
@@ -98,13 +97,9 @@ export function WorkPanel() {
                 }}
               >
                 <span className="wk-node-dot" aria-hidden="true" />
-                {source === 'internal'
-                  ? t('企业项目', 'Corporate')
-                  : t('开源项目', 'Open Source')}
+                {t('企业项目', 'Corporate')}
                 <span className="wk-node-n hud-mono">
-                  {String(
-                    source === 'internal' ? internal.length : oss.length
-                  ).padStart(2, '0')}
+                  {String(internal.length).padStart(2, '0')}
                 </span>
               </button>
             </>
@@ -131,38 +126,18 @@ export function WorkPanel() {
 
         {/* ── 当前层 ── */}
         <div className="wk-stage" key={`${source}-${company}`}>
-          {/* 第一层：选来源。企业项目在前 */}
+          {/* 第一层：选公司（企业项目是唯一来源，直接铺公司分支） */}
           {source === null && (
-            <ul className="wk-branches">
-              <Branch
-                label={t('企业项目', 'Corporate')}
-                sub={t(
-                  `${companies.size} 家公司 · ${internal.length} 个项目`,
-                  `${companies.size} companies · ${internal.length} projects`
-                )}
-                onClick={() => setSource('internal')}
-              />
-              <Branch
-                label={t('开源项目', 'Open Source')}
-                sub={t(
-                  '源码与在线体验公开可验证',
-                  'Source and live demo publicly verifiable'
-                )}
-                oss
-                onClick={() => setSource('oss')}
-              />
-            </ul>
-          )}
-
-          {/* 第二层：企业项目 → 选公司 */}
-          {source === 'internal' && !company && (
             <ul className="wk-branches">
               {[...companies.entries()].map(([name, items]) => (
                 <Branch
                   key={name}
                   label={name}
                   sub={`${items[0].period[lang]} — ${items[items.length - 1].period[lang]}`}
-                  onClick={() => setCompany(name)}
+                  onClick={() => {
+                    setSource('internal')
+                    setCompany(name)
+                  }}
                 />
               ))}
             </ul>
@@ -179,7 +154,7 @@ export function WorkPanel() {
   )
 }
 
-type Src = 'internal' | 'oss'
+type Src = 'internal'
 
 /**
  * 树上的一个可下钻分支。
@@ -191,17 +166,15 @@ type Src = 'internal' | 'oss'
 function Branch({
   label,
   sub,
-  oss,
   onClick,
 }: {
   label: string
   sub: string
-  oss?: boolean
   onClick: () => void
 }) {
   return (
     <li className="wk-branch-li">
-      <button className={`wk-branch${oss ? ' is-oss' : ''}`} onClick={onClick}>
+      <button className="wk-branch" onClick={onClick}>
         <span className="wk-branch-glyph" aria-hidden="true">
           <i />
           <i />
@@ -295,13 +268,7 @@ function Detail({
         <div className="wk-dt-meta">
           <span className="wk-no hud-mono">{project.no}</span>
           <span className={`wk-kind hud-mono is-${project.kind}`}>
-            {project.kind === 'oss'
-              ? lang === 'zh'
-                ? '开源'
-                : 'OSS'
-              : lang === 'zh'
-                ? '公司项目'
-                : 'Internal'}
+            {lang === 'zh' ? '公司项目' : 'Internal'}
           </span>
           <span className="wk-period hud-mono">{project.period[lang]}</span>
         </div>
