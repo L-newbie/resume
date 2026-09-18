@@ -79,11 +79,10 @@ export const SECTIONS: Section[] = [
     no: '02',
     label: { zh: '工作经历', en: 'Career' },
     tag: {
-      zh: '金融证券 · 刑侦数据 · 自动驾驶 · 独立开发',
-      en: 'Finance · Investigation · Autonomous Driving · Independent',
+      zh: '刑侦数据 · 自动驾驶',
+      en: 'Investigation · Autonomous Driving',
     },
     readouts: [
-      { k: same('2026'), v: { zh: '独立开发', en: 'Independent' } },
       { k: same('2021'), v: { zh: '地平线机器人', en: 'Horizon Robotics' } },
       { k: same('2019'), v: { zh: '集侦云', en: 'Jizhenyun' } },
     ],
@@ -93,8 +92,8 @@ export const SECTIONS: Section[] = [
     no: '03',
     label: { zh: '项目', en: 'Work' },
     tag: {
-      zh: '从数据闭环到独立产品',
-      en: 'From data loops to shipped products',
+      zh: '数据闭环 · 长尾挖掘 · 大模型进链路',
+      en: 'Data loops · Long-tail mining · LLMs in the loop',
     },
     /*
       ⚠️ 三行必须是**同一类**东西。
@@ -109,8 +108,8 @@ export const SECTIONS: Section[] = [
         v: same(`${PROJECTS.filter((p) => p.kind === 'internal').length}`),
       },
       {
-        k: { zh: '开源项目', en: 'Open Source' },
-        v: same(`${PROJECTS.filter((p) => p.kind === 'oss').length}`),
+        k: { zh: '覆盖专题', en: 'Topics covered' },
+        v: same(`${PROJECTS.length}`),
       },
       {
         k: { zh: '时间跨度', en: 'Span' },
